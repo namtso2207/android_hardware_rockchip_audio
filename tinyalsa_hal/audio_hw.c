@@ -1940,6 +1940,8 @@ static int out_set_volume(struct audio_stream_out *stream, float left,
 {
     struct stream_out *out = (struct stream_out *)stream;
     struct audio_device *adev = out->dev;
+    out->volume[0] = left;
+    out->volume[1] = right;
 
     /* The mutex lock is not needed, because the client
      * is not allowed to close the stream concurrently with this API
@@ -2178,6 +2180,85 @@ static int bitstream_write_data(struct stream_out *out,void* buffer,size_t bytes
     return ret;
 }
 
+/*
+ * process volume of one multi pcm frame
+ * The multi pcm output no using mixer,so the can't control by volume setting,
+ * so here we process multi pcm datas with volume value.
+ *
+ */
+static void out_multi_pcm_volume_process(struct stream_out *out, void *buffer)
+{
+    if ((out == NULL) || (buffer == NULL)){
+        return ;
+    }
+
+    int format = out->config.format;
+    int channel = out->config.channels;
+    if((format == PCM_FORMAT_S16_LE)) {
+        float left = out->volume[0];
+        short *pcm = (short*)buffer;
+        float temp = 0;
+        for (int ch = 0;  ch < channel; ch++) {
+            temp = (float)pcm[ch];
+            pcm[ch] = (short)(temp*left);
+        }
+    }
+}
+
+/*
+ * switch LFE and FC of one multi pcm frame
+ * swtich Front Center's datas and Low Frequency datas
+ * 5.1            FL+FR+FC+LFE+BL+BR
+ * 5.1(side)      FL+FR+FC+LFE+SL+SR
+ * 7.1            FL+FR+FC+LFE+SL+SR+BL+BR
+ * the datas needed in HDMI is:
+ *                FL+FR+LFE+FC+SL+SR+BL+BR
+ */
+static void out_multi_pcm_switch_fc_lfe(struct stream_out *out, void *buffer)
+{
+    if ((out == NULL) || (buffer == NULL)) {
+        return ;
+    }
+
+    const int CENTER = 2;
+    const int LFE    = 3;
+    int channel = out->config.channels;
+    int format = out->config.format;
+    audio_channel_mask_t channel_mask = out->channel_mask;
+    bool hasLFE = ((channel_mask & AUDIO_CHANNEL_OUT_LOW_FREQUENCY) != 0);
+
+    if (format == PCM_FORMAT_S16_LE) {
+        short *pcm = (short*)buffer;
+        short temp = 0;
+        if (hasLFE && ((channel == 6) || (channel == 8))) {
+            // Front Center's datas
+            temp = pcm[CENTER];
+            // swap FC and Low Frequency Effect's datas
+            pcm[CENTER] = pcm[LFE];
+            pcm[LFE] = temp;
+        }
+    }
+}
+
+static void out_multi_pcm_process(struct stream_out *out, void * buffer, size_t len) {
+    if((out == NULL) || (buffer == NULL) || (len <= 0)){
+        return ;
+    }
+
+    int format = out->config.format;
+    // only process PCM16
+    if (format == PCM_FORMAT_S16_LE) {
+        short *pcm = (short*)buffer;
+        int channel = out->config.channels;
+        int frames = len/audio_stream_out_frame_size(out);
+        for (int frame = 0; frame < frames; frame ++){
+            out_multi_pcm_volume_process(out, pcm);
+            out_multi_pcm_switch_fc_lfe(out, pcm);
+            pcm += channel;
+        }
+    }
+}
+
 /**
  * @brief out_write
  *
@@ -2247,6 +2328,12 @@ false_alarm:
             goto exit;
         }
     } else {
+        if(is_multi_pcm(out)) {
+            if(out->device == AUDIO_DEVICE_OUT_AUX_DIGITAL) {
+                out_multi_pcm_process(out, buffer, bytes);
+            }
+        }
+
         out_mute_data(out,(void*)buffer,bytes);
         dump_out_data(buffer, bytes);
         ret = -1;
@@ -3086,6 +3173,7 @@ static int adev_open_output_stream(struct audio_hw_device *dev,
     out->use_default_config = false;
     out->channel_buffer = NULL;
     out->bitstream_buffer = NULL;
+    out->volume[0] = out->volume[1] = 1.0f;
 
     init_hdmi_audio(&out->hdmi_audio);
     if(devices & AUDIO_DEVICE_OUT_AUX_DIGITAL) {
@@ -3140,6 +3228,7 @@ static int adev_open_output_stream(struct audio_hw_device *dev,
                 ALOGD("%s:out = %p HDMI multi pcm: layout = 0x%x,mask = 0x%x",
                     __FUNCTION__,out,layout,mask);
                 // current hdmi allocation(speaker) only support MONO or STEREO
+                #if 0
                 if(mask <= (int)AUDIO_CHANNEL_OUT_STEREO) {
                     ALOGD("%s:out = %p input stream is multi pcm,channle mask = 0x%x,but hdmi not support,mixer it to stereo output",
                         __FUNCTION__,out,config->channel_mask);
@@ -3149,7 +3238,9 @@ static int adev_open_output_stream(struct audio_hw_device *dev,
                     type = OUTPUT_LOW_LATENCY;
                     out->device = AUDIO_DEVICE_OUT_AUX_DIGITAL;
                     out->output_direct = false;
-                } else {
+                } else
+                #endif
+                {
                     /*
                      * maybe input audio stream is 7.1 channels,
                      * but hdmi only support 5.1, we also output 7.1 for default.

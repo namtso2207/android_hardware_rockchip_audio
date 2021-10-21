@@ -348,6 +348,7 @@ struct stream_out {
 
     bool  snd_reopen;
     bool  use_default_config;
+    float volume[2];
 };
 
 struct stream_in {
