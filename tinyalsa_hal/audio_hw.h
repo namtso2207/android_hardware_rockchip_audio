@@ -381,6 +381,7 @@ struct stream_in {
 #endif
     uint32_t channel_flag;
     int start_checkcount;
+    uint64_t frames_read;
 };
 
 #define STRING_TO_ENUM(string) { #string, string }

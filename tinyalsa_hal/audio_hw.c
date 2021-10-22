@@ -2755,6 +2755,7 @@ static ssize_t in_read(struct audio_stream_in *stream, void* buffer,
     struct stream_in *in = (struct stream_in *)stream;
     struct audio_device *adev = in->dev;
     size_t frames_rq = bytes / audio_stream_in_frame_size(stream);
+    size_t frames_rd = 0;
 
     if (in->device & AUDIO_DEVICE_IN_HDMI) {
         unsigned int rate = get_hdmiin_audio_rate(adev);
@@ -2789,9 +2790,11 @@ static ssize_t in_read(struct audio_stream_in *stream, void* buffer,
         ret = process_frames(in, buffer, frames_rq);
       else */
     //ALOGV("%s:frames_rq:%d",__FUNCTION__,frames_rq);
-    ret = read_frames(in, buffer, frames_rq);
-    if (ret > 0)
-        ret = 0;
+    frames_rd = read_frames(in, buffer, frames_rq);
+    if (frames_rd > 0) {
+        in->frames_read += frames_rd;
+        bytes = frames_rd * audio_stream_in_frame_size(stream);
+    }
 
     dump_in_data(buffer, bytes);
 
@@ -2928,6 +2931,40 @@ static int adev_get_microphones(const struct audio_hw_device *dev,
     ALOGD("%s,get capture mic actual_mic_count =%d",__func__,actual_mic_count);
     *mic_count = actual_mic_count;
     return 0;
+}
+
+static int in_get_capture_position(const struct audio_stream_in *stream,
+                        int64_t *frames, int64_t *time)
+{
+    ALOGD("%s");
+    if (stream == NULL || frames == NULL || time == NULL) {
+        return -EINVAL;
+    }
+    struct stream_in *in = (struct stream_in *)stream;
+    int ret = -ENOSYS;
+
+    pthread_mutex_lock(&in->lock);
+    // note: ST sessions do not close the alsa pcm driver synchronously
+    // on standby. Therefore, we may return an error even though the
+    // pcm stream is still opened.
+    if (in->standby) {
+        ALOGD("skip when standby is true.");
+        goto exit;
+    }
+    if (in->pcm) {
+        struct timespec timestamp;
+        size_t avail;
+        if (pcm_get_htimestamp(in->pcm, &avail, &timestamp) == 0) {
+            *frames = in->frames_read + avail;
+            *time = timestamp.tv_sec * 1000000000LL + timestamp.tv_nsec;
+            ret = 0;
+            ALOGD("Pos: %lld %lld", *time, *frames);
+        }
+    }
+exit:
+    pthread_mutex_unlock(&in->lock);
+
+    return ret;
 }
 
 static int in_get_active_microphones(const struct audio_stream_in *stream,
@@ -3632,6 +3669,7 @@ static int adev_open_input_stream(struct audio_hw_device *dev,
     in->stream.read = in_read;
     in->stream.get_input_frames_lost = in_get_input_frames_lost;
     in->stream.get_active_microphones = in_get_active_microphones;
+    in->stream.get_capture_position = in_get_capture_position;
 
 #ifdef RK_DENOISE_ENABLE
     in->mDenioseState = NULL;
