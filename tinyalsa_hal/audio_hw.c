@@ -43,7 +43,7 @@
 #include "audio_hw.h"
 #include <system/audio.h>
 #include "codec_config/config.h"
-#include "audio_bitstream.h"
+
 #include "audio_setting.h"
 #include <unistd.h>
 #include <fcntl.h>
@@ -424,7 +424,7 @@ static bool dev_id_match(const char *info, const char *did)
         idx ++;
     }
     if (strstr(id, did)) {
-        ALOGE("match dai!!!: %s", id, did);
+        ALOGE("match dai!!!: %s %s", id, did);
         return true;
     }
     return false;
@@ -777,6 +777,9 @@ static bool is_bitstream(struct stream_out *out)
         return false;
     }
 
+    if (out->config.format == PCM_FORMAT_IEC958_SUBFRAME_LE)
+        return true;
+
     bool bitstream = false;
     if (out->output_direct) {
         switch(out->output_direct_mode) {
@@ -958,12 +961,15 @@ static int start_output_stream(struct stream_out *out)
             card = adev->dev_out[SND_OUT_SOUND_CARD_HDMI].card;
             device =adev->dev_out[SND_OUT_SOUND_CARD_HDMI].device;
             if (card != (int)SND_OUT_SOUND_CARD_UNKNOWN) {
-#ifdef USE_DRM
-            ret = mixer_mode_set(out);
 
-            if (ret!=0) {
-                ALOGE("mixer mode set error,ret=%d!",ret);
-            }
+#ifndef IEC958_FORAMT         
+#ifdef  USE_DRM
+                // set audio mode
+                ret = mixer_mode_set(out);
+                if (ret != 0) {
+                    ALOGE("mixer mode set error,ret=%d!",ret);
+                }
+#endif
 #endif
 
                 out->pcm[SND_OUT_SOUND_CARD_HDMI] = pcm_open(card, device,
@@ -975,6 +981,13 @@ static int start_output_stream(struct stream_out *out)
                     pcm_close(out->pcm[SND_OUT_SOUND_CARD_HDMI]);
                     return -ENOMEM;
                 }
+
+                if (is_bitstream(out) && ((out->config.format == PCM_FORMAT_S24_LE)
+                    || (out->config.format == PCM_FORMAT_IEC958_SUBFRAME_LE))) {
+                    out->bistream = bitstream_init(out->config.format,
+                        out->config.rate, out->config.channels);
+                }
+
                 if (is_multi_pcm(out) || is_bitstream(out)){
                     adev->owner[SOUND_CARD_HDMI] = (int*)out;
                 }
@@ -1606,6 +1619,8 @@ static void do_out_standby(struct stream_out *out)
         if(adev->owner[SOUND_CARD_SPDIF] == (int*)out){
             adev->owner[SOUND_CARD_SPDIF] = NULL;
         }
+
+        bitstream_destory(&out->bistream);
     }
 }
 
@@ -1683,7 +1698,7 @@ int out_dump(const struct audio_stream *stream, int fd)
     ALOGD("out->Device     : 0x%x", out->device);
     ALOGD("out->SampleRate : %d", out->config.rate);
     ALOGD("out->Channels   : %d", out->config.channels);
-    ALOGD("out->Formate    : %d", out->config.format);
+    ALOGD("out->Format     : %d", out->config.format);
     ALOGD("out->PreiodSize : %d", out->config.period_size);
     return 0;
 }
@@ -2028,22 +2043,6 @@ static void dump_in_data(const void* buffer, size_t bytes)
     }
 }
 
-/**
- * @brief reset_bitstream_buf
- *
- * @param out
- */
-static void reset_bitstream_buf(struct stream_out *out)
-{
-    if (is_bitstream(out)) {
-        if(out->config.format == PCM_FORMAT_S24_LE) {
-            if (out->bitstream_buffer) {
-                free (out->bitstream_buffer);
-                out->bitstream_buffer = NULL;
-            }
-        }
-    }
-}
 
 static void check_hdmi_reconnect(struct stream_out *out)
 {
@@ -2137,19 +2136,7 @@ static void out_mute_data(struct stream_out *out,void* buffer,size_t bytes)
     }
 }
 
-static int fill_hdmi_bistream(struct stream_out *out,void* buffer,size_t insize)
-{
-    int size = 2*insize;
-    if (out->bitstream_buffer == NULL) {
-        out->bitstream_buffer = (char *)malloc(size);
-        ALOGD("new bitstream buffer!");
-    }
-    memset(out->bitstream_buffer, 0x00, size);
-    fill_hdmi_bitstream_buf((void *)buffer, (void *)out->bitstream_buffer,(void*)out->channel_buffer, (int)insize);
-    return size;
-}
-
-static int bitstream_write_data(struct stream_out *out,void* buffer,size_t bytes)
+static int bitstream_write_data(struct stream_out *out, void* buffer, size_t bytes)
 {
     if ((out == NULL) || (buffer == NULL) || (bytes <= 0)) {
         ALOGD("%s: %d, input parameter is invalid",__FUNCTION__,__LINE__);
@@ -2165,11 +2152,16 @@ static int bitstream_write_data(struct stream_out *out,void* buffer,size_t bytes
                 out_mute_data(out,buffer,bytes);
                 dump_out_data(buffer, bytes);
                 ret = pcm_write(out->pcm[SND_OUT_SOUND_CARD_HDMI], (void *)buffer, bytes);
-            }else if(out->config.format == PCM_FORMAT_S24_LE){
-                int size = fill_hdmi_bistream(out,buffer,bytes);
-                out_mute_data(out,(void*)out->bitstream_buffer,size);
-                dump_out_data((void*)out->bitstream_buffer, size);
-                ret = pcm_write(out->pcm[SND_OUT_SOUND_CARD_HDMI], (void *)out->bitstream_buffer, size);
+            } else if(out->config.format == PCM_FORMAT_S24_LE ||
+                     out->config.format == PCM_FORMAT_IEC958_SUBFRAME_LE){
+                char *outBuffer = NULL;
+                int   outSize = 0;
+                ret = bitstream_encode(out->bistream, (char*)buffer, (int)bytes, &outBuffer, &outSize);
+                if (ret == 0 && outSize > 0) {
+                    out_mute_data(out,(void*)outBuffer, outSize);
+                    dump_out_data((void*)outBuffer, outSize);
+                    ret = pcm_write(out->pcm[SND_OUT_SOUND_CARD_HDMI], (void *)outBuffer, outSize);
+                }
             }
         } else {
             ALOGD("%s: %d: HDMI sound card not open",__FUNCTION__,__LINE__);
@@ -2283,7 +2275,6 @@ static ssize_t out_write(struct audio_stream_out *stream, const void* buffer,
      * executing out_set_parameters() while holding the hw device
      * mutex
      */
-
     check_hdmi_reconnect(out);
     pthread_mutex_lock(&out->lock);
     if (out->standby) {
@@ -2323,7 +2314,7 @@ false_alarm:
 
     /* Write to all active PCMs */
     if ((out->device & AUDIO_DEVICE_OUT_AUX_DIGITAL) && is_bitstream(out)) {
-        ret = bitstream_write_data(out,(void*)buffer,bytes);
+        ret = bitstream_write_data(out, (void*)buffer, bytes);
         if(ret < 0) {
             goto exit;
         }
@@ -2378,7 +2369,7 @@ final_exit:
         out->nframes = out->written;
     }
     if (ret != 0) {
-        ALOGD("AudioData write  error , keep slience! ret = %d", ret);
+        ALOGV("AudioData write  error , keep slience! ret = %d", ret);
         usleep(bytes * 1000000 / audio_stream_out_frame_size(stream) /
                out_get_sample_rate(&stream->common));
     }
@@ -3008,7 +2999,6 @@ static int adev_get_microphones(const struct audio_hw_device *dev,
 static int in_get_capture_position(const struct audio_stream_in *stream,
                         int64_t *frames, int64_t *time)
 {
-    ALOGD("%s");
     if (stream == NULL || frames == NULL || time == NULL) {
         return -EINVAL;
     }
@@ -3171,9 +3161,8 @@ static int adev_open_output_stream(struct audio_hw_device *dev,
     out->output_direct = false;
     out->snd_reopen = false;
     out->use_default_config = false;
-    out->channel_buffer = NULL;
-    out->bitstream_buffer = NULL;
     out->volume[0] = out->volume[1] = 1.0f;
+    out->bistream = NULL;
 
     init_hdmi_audio(&out->hdmi_audio);
     if(devices & AUDIO_DEVICE_OUT_AUX_DIGITAL) {
@@ -3198,14 +3187,19 @@ static int adev_open_output_stream(struct audio_hw_device *dev,
                         out->output_direct_mode = NLPCM;
                     }
 
-                    if (channel == 8) {
-                        out->config = pcm_config_direct;
-                        out->config.rate = config->sample_rate;
-                    } else if (config->sample_rate >= 176400) {
-                        out->config.period_size = 1024 * 4;
+                    if (out->config.format == PCM_FORMAT_S24_LE) {
+                        if (config->sample_rate >= 176400) {
+                            out->config.period_size = 1024 * 4;
+                        } else {
+                            out->config.period_size = 2048;
+                        }
                     } else {
-                        out->config.period_size = 2048;
+                        out->config.period_size = config->sample_rate/100;   // 10ms
                     }
+
+                    #ifdef RK3128  // only 3128 using 16bit to bitstream
+                    out->config.format = PCM_FORMAT_S16_LE;
+                    #endif
                     type = OUTPUT_HDMI_MULTI;
                 } else {
                     out->config = pcm_config;
@@ -3228,7 +3222,6 @@ static int adev_open_output_stream(struct audio_hw_device *dev,
                 ALOGD("%s:out = %p HDMI multi pcm: layout = 0x%x,mask = 0x%x",
                     __FUNCTION__,out,layout,mask);
                 // current hdmi allocation(speaker) only support MONO or STEREO
-                #if 0
                 if(mask <= (int)AUDIO_CHANNEL_OUT_STEREO) {
                     ALOGD("%s:out = %p input stream is multi pcm,channle mask = 0x%x,but hdmi not support,mixer it to stereo output",
                         __FUNCTION__,out,config->channel_mask);
@@ -3238,9 +3231,7 @@ static int adev_open_output_stream(struct audio_hw_device *dev,
                     type = OUTPUT_LOW_LATENCY;
                     out->device = AUDIO_DEVICE_OUT_AUX_DIGITAL;
                     out->output_direct = false;
-                } else
-                #endif
-                {
+                } else {
                     /*
                      * maybe input audio stream is 7.1 channels,
                      * but hdmi only support 5.1, we also output 7.1 for default.
@@ -3295,26 +3286,6 @@ static int adev_open_output_stream(struct audio_hw_device *dev,
         out->config = pcm_config;
         out->pcm_device = PCM_DEVICE;
         type = OUTPUT_LOW_LATENCY;
-    }
-
-    /*
-      * the ip of hdmi need convert 16 bits to 21 bits(except rk3128's ip) if bitstream over hdmi
-      */
-    if (is_bitstream(out) && (devices & AUDIO_DEVICE_OUT_AUX_DIGITAL)) {
-        /*
-         * the ip of hdmi need convert 16 bits to 21 bits(except rk3128's ip)
-         */
-        out->config.format = PCM_FORMAT_S24_LE;
-#ifdef RK3128
-        out->config.format = PCM_FORMAT_S16_LE;
-#endif
-        if(out->config.format == PCM_FORMAT_S24_LE){
-            out->channel_buffer = malloc(CHASTA_SUB_NUM);
-            initchnsta(out->channel_buffer);
-            setChanSta(out->channel_buffer,out->config.rate, out->config.channels);
-        }
-    } else {
-        out->config.format = PCM_FORMAT_S16_LE;
     }
 
     ALOGD("out->config.rate = %d, out->config.channels = %d out->config.format = %d",
@@ -3388,20 +3359,12 @@ static void adev_close_output_stream(struct audio_hw_device *dev,
             break;
         }
     }
+
     {
         struct stream_out *out = (struct stream_out *)stream;
-        if (out->bitstream_buffer != NULL) {
-            free(out->bitstream_buffer);
-            out->bitstream_buffer = NULL;
-        }
-
-        if (out->channel_buffer != NULL) {
-            free(out->channel_buffer);
-            out->channel_buffer = NULL;
-        }
-
         destory_hdmi_audio(&out->hdmi_audio);
     }
+
     pthread_mutex_unlock(&adev->lock_outputs);
     free(stream);
 }

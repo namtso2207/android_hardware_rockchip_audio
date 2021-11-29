@@ -3,6 +3,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <cutils/log.h>
+#include <sys/endian.h>
 
 /* b, p, c, u, v, 0, 0, 0*/
 #define B_BIT_SHIFT    7
@@ -51,7 +52,7 @@ bool isValidSamplerate(int samplerate)
 void initchnsta(char* buffer)
 {
     scount = 0;
-    if(buffer != NULL){
+    if (buffer != NULL) {
         memset(buffer, 0x0, CHASTA_SUB_NUM);
         buffer[CHASTA_BIT1*2] = 1;
         buffer[CHASTA_BIT1*2+1] = 1;
@@ -86,7 +87,7 @@ void initchnsta(char* buffer)
 
 void set176400chnsta(char* buffer)
 {
-    if(buffer == NULL)
+    if (buffer == NULL)
         return;    
 
     /* sampling frequency default 176.4K */
@@ -111,7 +112,7 @@ void set176400chnsta(char* buffer)
 
 void set32000chnsta(char* buffer)
 {
-    if(buffer == NULL)
+    if (buffer == NULL)
         return;
 
     /* sampling frequency default 32K */
@@ -137,7 +138,7 @@ void set32000chnsta(char* buffer)
 
 void set44100chnsta(char* buffer)
 {
-    if(buffer == NULL)
+    if (buffer == NULL)
         return;
 
     /* sampling frequency default 44.1K */
@@ -165,7 +166,7 @@ void set44100chnsta(char* buffer)
  */
 void setnlpcmchnsta(char* buffer)
 {
-    if((buffer == NULL))
+    if (buffer == NULL)
         return;
 
     /* sampling frequency default 48k */
@@ -190,7 +191,7 @@ void setnlpcmchnsta(char* buffer)
 
 void setddpchnsta(char* buffer)
 {
-    if((buffer == NULL))
+    if (buffer == NULL)
         return;
     
     /* sampling frequency default 192k */
@@ -219,7 +220,7 @@ void setddpchnsta(char* buffer)
  */
 void sethbrchnsta(char* buffer)
 {
-    if((buffer == NULL))
+    if (buffer == NULL)
         return;
 
     buffer[CHASTA_BIT24*2] |= C_BIT_SET;
@@ -243,7 +244,7 @@ void sethbrchnsta(char* buffer)
 
 void setChanSta(char* buffer,int samplerate, int channel)
 {
-    if(buffer == NULL)
+    if (buffer == NULL)
         return;
 
     if (channel == 8) {
@@ -270,7 +271,7 @@ void setChanSta(char* buffer,int samplerate, int channel)
     }
 }
 
-void fill_hdmi_bitstream_buf(void * in, void* out,void* chan, int length)
+int fill_hdmi_bitstream_buf(void * in, void* out,void* chan, int length)
 {
     int temp, p, j = 0;
     char *ptr = (char *)in;
@@ -278,7 +279,7 @@ void fill_hdmi_bitstream_buf(void * in, void* out,void* chan, int length)
     char *newptr = (char *)out;
     char* channel = (char *)chan;
     if((ptr == NULL) || (newptr == NULL) || (channel == NULL) || (length <= 0))
-        return ;
+        return -1;
 
     while (ptr < ptr_end) {
         newptr[0] = (ptr[0]&0x1f)<<3;
@@ -301,6 +302,8 @@ void fill_hdmi_bitstream_buf(void * in, void* out,void* chan, int length)
         ptr +=2;
         newptr +=4;
     }
+
+	return 0;
 }
 
 
@@ -309,7 +312,7 @@ void fill_hdmi_bitstream_buf(void * in, void* out,void* chan, int length)
  */
 void dumpchnsta(char* buffer)
 {
-    if(buffer == NULL)
+    if (buffer == NULL)
         return;
 
     for (int i=0; i<CHASTA_SUB_NUM; i+=16) {
@@ -321,6 +324,3 @@ void dumpchnsta(char* buffer)
               buffer[i+12], buffer[i+13], buffer[i+14], buffer[i+15]);
     }
 }
-
-
-
