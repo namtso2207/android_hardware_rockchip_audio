@@ -57,6 +57,10 @@ struct alsa_sound_card_config sound_card_config_list[] = {
         .route_table = &rt5678_config_table,
     },
     {
+        .sound_card_name = "rockchipes8388",
+        .route_table = &es8388_config_table,
+    },
+    {
         .sound_card_name = "rockchipes8388c",
         .route_table = &es8388_config_table,
     },
