@@ -1392,7 +1392,8 @@ static ssize_t read_frames(struct stream_in *in, void *buffer, ssize_t frames)
 frame_count :
                 frames_rd,
             };
-            get_next_buffer(&in->buf_provider, &buf);
+            if (get_next_buffer(&in->buf_provider, &buf))
+                break;
             if (buf.raw != NULL) {
                 memcpy((char *)buffer +
                        frames_wr * frame_size,
@@ -2766,7 +2767,10 @@ static ssize_t in_read(struct audio_stream_in *stream, void* buffer,
       else */
     //ALOGV("%s:frames_rq:%d",__FUNCTION__,frames_rq);
     frames_rd = read_frames(in, buffer, frames_rq);
-    if (frames_rd > 0) {
+    if (in->read_status) {
+        ret = -EPIPE;
+        goto exit;
+    } else if (frames_rd > 0) {
         in->frames_read += frames_rd;
         bytes = frames_rd * audio_stream_in_frame_size(stream);
     }
@@ -2804,6 +2808,7 @@ static ssize_t in_read(struct audio_stream_in *stream, void* buffer,
 #endif
 exit:
     if (ret < 0) {
+        memset(buffer, 0, bytes);
         usleep(bytes * 1000000 / audio_stream_in_frame_size(stream) /
                in_get_sample_rate(&stream->common));
         do_in_standby(in);
