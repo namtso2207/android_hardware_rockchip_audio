@@ -362,6 +362,7 @@ struct dev_proc_info HDMI_IN_NAME[] =
 {
     {"realtekrt5651co", "tc358749x-audio"},
     {"hdmiin", NULL},
+    {"rockchiphdmirx", NULL},
     {NULL, NULL}, /* Note! Must end with NULL, else will cause crash */
 };
 
