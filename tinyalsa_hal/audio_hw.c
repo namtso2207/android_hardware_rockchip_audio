@@ -1080,7 +1080,9 @@ static int get_next_buffer(struct resampler_buffer_provider *buffer_provider,
         }
 
 #ifdef RK_DENOISE_ENABLE
-        rkdenoise_process(in->mDenioseState, (void*)in->buffer, size, (void*)in->buffer);
+        if (!(in->device & AUDIO_DEVICE_IN_HDMI)) {
+            rkdenoise_process(in->mDenioseState, (void*)in->buffer, size, (void*)in->buffer);
+        }
 #endif
         //fwrite(in->buffer,pcm_frames_to_bytes(in->pcm,pcm_get_buffer_size(in->pcm)),1,in_debug);
         in->frames_in = in->config->period_size;
@@ -2794,11 +2796,6 @@ static ssize_t in_read(struct audio_stream_in *stream, void* buffer,
      */
     //if (ret == 0 && adev->mic_mute)
     //    memset(buffer, 0, bytes);
-
-    if (in->device & AUDIO_DEVICE_IN_HDMI) {
-        goto exit;
-    }
-
 #ifdef ALSA_IN_DEBUG
         fwrite(buffer, bytes, 1, in_debug);
 #endif
