@@ -357,7 +357,6 @@ struct dev_proc_info MIC_IN_NAME[] =
     {NULL, NULL}, /* Note! Must end with NULL, else will cause crash */
 };
 
-
 struct dev_proc_info HDMI_IN_NAME[] =
 {
     {"realtekrt5651co", "tc358749x-audio"},
@@ -442,14 +441,15 @@ static bool get_specified_out_dev(struct dev_info *devinfo,
     char info[256];
     size_t len;
     FILE* file = NULL;
-    int better = 0;
+    int score  = 0;
+    int better = devinfo->score;
     int index = -1;
 
     /* parse card id */
     if (!match)
         return true; /* match any */
     while (match[i].cid) {
-        int score = name_match(id, match[i].cid);
+        score = name_match(id, match[i].cid);
         if (score > better) {
             better = score;
             index = i;
@@ -466,6 +466,7 @@ static bool get_specified_out_dev(struct dev_info *devinfo,
     if (!match[index].did) { /* no exist dai info, exit */
         devinfo->card = card;
         devinfo->device = 0;
+        devinfo->score  = better;
         ALOGD("%s card, got card=%d,device=%d", devinfo->id,
               devinfo->card, devinfo->device);
         return true;
@@ -495,6 +496,7 @@ static bool get_specified_out_dev(struct dev_info *devinfo,
         if (dev_id_match(info, match[index].did)) {
             devinfo->card = card;
             devinfo->device = device;
+            devinfo->score  = better;
             ALOGD("%s card, got card=%d,device=%d", devinfo->id,
                   devinfo->card, devinfo->device);
         return true;
@@ -514,14 +516,16 @@ static bool get_specified_in_dev(struct dev_info *devinfo,
     char info[256];
     size_t len;
     FILE* file = NULL;
-    int better = 0;
+    int score  = 0;
+    int better = devinfo->score;
     int index = -1;
 
     /* parse card id */
     if (!match)
         return true; /* match any */
+
     while (match[i].cid) {
-        int score = name_match(id, match[i].cid);
+        score = name_match(id, match[i].cid);
         if (score > better) {
             better = score;
             index = i;
@@ -538,6 +542,7 @@ static bool get_specified_in_dev(struct dev_info *devinfo,
     if (!match[index].did) { /* no exist dai info, exit */
         devinfo->card = card;
         devinfo->device = 0;
+        devinfo->score = better;
         ALOGD("%s card, got card=%d,device=%d", devinfo->id,
               devinfo->card, devinfo->device);
         return true;
@@ -567,6 +572,7 @@ static bool get_specified_in_dev(struct dev_info *devinfo,
         if (dev_id_match(info, match[i].did)) {
             devinfo->card = card;
             devinfo->device = device;
+            devinfo->score = better;
             ALOGD("%s card, got card=%d,device=%d", devinfo->id,
                   devinfo->card, devinfo->device);
             return true;
@@ -601,6 +607,7 @@ static void set_default_dev_info( struct dev_info *info, int size, int rid)
             info[i].id = NULL;
         }
         info[i].card = (int)SND_OUT_SOUND_CARD_UNKNOWN;
+        info[i].score = 0;
     }
 }
 
