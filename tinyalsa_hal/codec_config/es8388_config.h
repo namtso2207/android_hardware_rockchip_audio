@@ -16,6 +16,14 @@ const struct config_control es8388_speaker_normal_controls[] = {
         .ctl_name = "Output 2 Playback Volume",
         .int_val = {27, 27},
     },
+    {
+        .ctl_name = "aw87xxx_profile_switch_0",
+        .str_val = "Music",
+    },
+    {
+        .ctl_name = "aw87xxx_profile_switch_1",
+        .str_val = "Music",
+    },
 };
 
 const struct config_control es8388_speaker_incall_controls[] = {
@@ -183,7 +191,15 @@ const struct config_control es8388_playback_off_controls[] = {
     {
         .ctl_name = "Output 1 Playback Volume",
         .int_val = {0, 0},
-    }
+    },
+    {
+        .ctl_name = "aw87xxx_profile_switch_0",
+        .str_val = "Off",
+    },
+    {
+        .ctl_name = "aw87xxx_profile_switch_1",
+        .str_val = "Off",
+    },
 };
 
 const struct config_control es8388_capture_off_controls[] = {
