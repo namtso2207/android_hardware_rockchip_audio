@@ -43,7 +43,7 @@ rk_bistream* bitstream_init(enum pcm_format format, int samplerate, int channel)
         initchnsta(bs->chnStatus);
         setChanSta(bs->chnStatus, samplerate, channel);
     } else if (format == PCM_FORMAT_IEC958_SUBFRAME_LE) {
-        iec958_init(&bs->iec958, samplerate, channel);
+        iec958_init(&bs->iec958, samplerate, channel, false);
     } else {
         ALOGD("%s: format = %d not support", __FUNCTION__, (int)format);
         free(bs);
@@ -102,6 +102,7 @@ void bitstream_destory(rk_bistream **bitstream) {
     }
 
     bs->capaticy = 0;
+    iec958_deInit(&bs->iec958);
     free(bs);
     *bitstream = NULL;
 }

@@ -24,6 +24,7 @@
 #ifndef _RK_AUDIO_IEC958_
 #define _RK_AUDIO_IEC958_
 
+#include "stdbool.h"
 
  /* AES/IEC958 channel status bits */
 #define IEC958_AES0_PROFESSIONAL	(1<<0)	/* 0 = consumer, 1 = professional */
@@ -116,7 +117,18 @@
 #define IEC958_AES3_CON_CLOCK_1000PPM	(0<<4)	/* 1000 ppm */
 #define IEC958_AES3_CON_CLOCK_50PPM	(1<<4)	/* 50 ppm */
 #define IEC958_AES3_CON_CLOCK_VARIABLE	(2<<4)	/* variable pitch */
- 
+
+#define IEC958_AES4_CON_BITS24      0x0b
+#define IEC958_AES4_CON_FS_44100    0xf0
+#define IEC958_AES4_CON_FS_88200	0x70
+#define IEC958_AES4_CON_FS_22050    0xb0
+#define IEC958_AES4_CON_FS_176400	0x30
+#define IEC958_AES4_CON_FS_48000	0xd0
+#define IEC958_AES4_CON_FS_96000	0x50
+#define IEC958_AES4_CON_FS_24000    0x90
+#define IEC958_AES4_CON_FS_192000   0x10
+#define IEC958_AES4_CON_FS_32000    0xc0
+
 typedef struct _rk_iec958 {
     unsigned int  counter;
     unsigned char status[24];
@@ -126,7 +138,8 @@ typedef struct _rk_iec958 {
     int           samplerate;
 } rk_iec958;
 
-extern int iec958_init(rk_iec958 *iec, int samplerate, int channel);
+extern int iec958_init(rk_iec958 *iec, int samplerate, int channel, bool isPcm);
+extern int iec958_deInit(rk_iec958 *iec);
 extern int iec958_frame_encode(rk_iec958 *iec, char *in, int inLength, char *out, int *outLength);
 
 #endif  // _RK_AUDIO_IEC958_
