@@ -1148,6 +1148,30 @@ static void release_buffer(struct resampler_buffer_provider *buffer_provider,
     in->frames_in -= buffer->frame_count;
 }
 
+static bool get_hdmiin_audio_info(struct audio_device *adev, char *prop, int *value)
+{
+    char strfile[128];
+    FILE* file = NULL;
+    char info[20] = {0};
+
+    if (!value)
+        return false;
+    sprintf(strfile, "/sys/class/hdmirx/%s/%s", "hdmirx", prop);
+    if (access(strfile, 0)) {
+        ALOGD("No exist %s", strfile);
+        return false;
+    }
+    file = fopen(strfile, "r");
+    if (!file) {
+        ALOGD("Could reading %s property", strfile);
+        return false;
+    }
+    fread(info, sizeof(char), sizeof(info)/sizeof(char) - 1, file);
+    fclose(file);
+    *value = atoi(info);
+    return true;
+}
+
 #define STR_32KHZ "32KHZ"
 #define STR_44_1KHZ "44.1KHZ"
 #define STR_48KHZ "48KHZ"
@@ -1158,10 +1182,13 @@ static void release_buffer(struct resampler_buffer_provider *buffer_provider,
  */
 static int get_hdmiin_audio_rate(struct audio_device *adev)
 {
-    int rate = 44100;
+    int rate;
     char value[PROPERTY_VALUE_MAX] = "";
-    property_get("vendor.hdmiin.audiorate", value, STR_44_1KHZ);
 
+    if (get_hdmiin_audio_info(adev, "audio_rate", &rate)) {
+        return rate;
+    }
+    property_get("vendor.hdmiin.audiorate", value, STR_44_1KHZ);
     if ( 0 == strncmp(value, STR_32KHZ, strlen(STR_32KHZ)) ){
         rate = 32000;
     } else if ( 0 == strncmp(value, STR_44_1KHZ, strlen(STR_44_1KHZ)) ){
@@ -1222,6 +1249,7 @@ static int start_input_stream(struct stream_in *in)
     int  ret = 0;
     int card = 0;
     int device = 0;
+    int hdmiin_present = 0;
 
     channel_check_start(in);
     in_dump(in, 0);
@@ -1287,6 +1315,12 @@ static int start_input_stream(struct stream_in *in)
 #else
     card = (int)adev->dev_in[SND_IN_SOUND_CARD_HDMI].card;
     if (in->device & AUDIO_DEVICE_IN_HDMI && (card != (int)SND_OUT_SOUND_CARD_UNKNOWN)) {
+        if (get_hdmiin_audio_info(adev, "audio_present", &hdmiin_present)) {
+            if (!hdmiin_present) {
+                ALOGD("hdmiin audio is no present, don't open hdmiin sound");
+                return -EEXIST;
+            }
+        }
         in->config->rate = get_hdmiin_audio_rate(adev);
         in->pcm = pcm_open(card, PCM_DEVICE, PCM_IN, in->config);
         ALOGD("open HDMIIN %d", card);
