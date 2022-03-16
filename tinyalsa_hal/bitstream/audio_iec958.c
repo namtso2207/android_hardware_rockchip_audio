@@ -115,7 +115,7 @@
  *           0  0  0  0     Original sampling frequency not indicated(default)
  */
 
-int iec958_16to32(short *buffer) {
+unsigned int iec958_16to32(short *buffer) {
     unsigned int data = (*buffer) << 16;
     return data;
 }
@@ -144,6 +144,7 @@ static unsigned int iec958_parity(unsigned int data) {
     *     31    = block start
     */
     parity = 0;
+    data >>= 11;
     for (bit = 11; bit <= 29; bit++) {
         if (data & 1)
             parity++;
@@ -238,7 +239,7 @@ void setResample(unsigned char *status, int sameplerate) {
         case 192000:
             *status = IEC958_AES3_CON_FS_192000;
             break;
-        case IEC958_AES3_CON_FS_768000:
+        case 768000:
             *status = IEC958_AES3_CON_FS_768000;
             break;
         default:
@@ -247,12 +248,56 @@ void setResample(unsigned char *status, int sameplerate) {
     }
 }
 
-int iec958_init(rk_iec958 *iec, int samplerate, int channel) {
-    const unsigned char default_status_bits[] = {
+void setOriginalResample(unsigned char *status, int sameplerate) {
+    // set AES4(Byte4) bit36~39
+    switch(sameplerate) {
+        case 22050:
+            *status |= IEC958_AES4_CON_FS_22050;
+            break;
+        case 24000:
+            *status |= IEC958_AES4_CON_FS_24000;
+            break;
+        case 32000:
+            *status |= IEC958_AES4_CON_FS_32000;
+            break;
+        case 44100:
+            *status |= IEC958_AES4_CON_FS_44100;
+            break;
+        case 48000:
+            *status |= IEC958_AES4_CON_FS_48000;
+            break;
+        case 88200:
+            *status |= IEC958_AES4_CON_FS_88200;
+            break;
+        case 96000:
+            *status |= IEC958_AES4_CON_FS_96000;
+            break;
+        case 176400:
+            *status |= IEC958_AES4_CON_FS_176400;
+            break;
+        case 192000:
+            *status |= IEC958_AES4_CON_FS_192000;
+            break;
+        default:
+            break;
+    }
+}
+
+
+int iec958_init(rk_iec958 *iec, int samplerate, int channel, bool isPcm) {
+    const unsigned char pcm_status_bits[] = {
         IEC958_AES0_CON_EMPHASIS_NONE,   // Byte0 consumer, not-copyright, emphasis-none, mode=0
         IEC958_AES1_CON_ORIGINAL | IEC958_AES1_CON_PCM_CODER,  // Byte1 original, PCM coder
         0,  // Byte2 source and channel
         IEC958_AES3_CON_FS_48000,  // Byte3 fs=48000Hz, clock accuracy=1000ppm
+    };
+
+    const unsigned char bistream_status_bits[] = {
+        IEC958_AES0_NONAUDIO, // non pcm
+        0,  // bit8~bit15
+        0,  // Byte2 source and channel bit16~bit23
+        IEC958_AES3_CON_FS_48000,  // bit24~bit31
+        IEC958_AES4_CON_BITS24,
     };
 
     if (iec == NULL)
@@ -260,12 +305,32 @@ int iec958_init(rk_iec958 *iec, int samplerate, int channel) {
 
     iec->counter = 0;
     memset(iec->status, 0, sizeof(iec->status));
-    memcpy(iec->status, default_status_bits, sizeof(default_status_bits));
+    if (isPcm) {
+        memcpy(iec->status, pcm_status_bits, sizeof(pcm_status_bits));
+    } else {
+        memcpy(iec->status, bistream_status_bits, sizeof(bistream_status_bits));
+        // HBR for example TRUEHD, DTS-HD using 768000 samplerate
+        if (channel == 8) {
+            samplerate = 768000;
+        }
+    }
 
+    // always using channel = 2 to convert IEC61937/PCM frame to IEC958 frame
+    channel = 2;
     setResample(&iec->status[3], samplerate);
+    setOriginalResample(&iec->status[4], samplerate);
+
     iec->samplerate = samplerate;
     iec->channels   = channel;
-    ALOGD("this = %p", iec);
+    ALOGV("this = %p, status: 0x%x, 0x%x, 0x%x, 0x%x, 0x%x",
+        iec, iec->status[0], iec->status[1], iec->status[2], iec->status[3], iec->status[4]);
+    ALOGV("this = %p, samplerate = %d, channel = %d", iec, samplerate, channel);
 
     return 0;
 }
+
+int iec958_deInit(rk_iec958 *iec) {
+    (void)iec;
+    return 0;
+}
+
