@@ -2406,7 +2406,7 @@ final_exit:
     }
     if (ret != 0) {
         ALOGV("AudioData write  error , keep slience! ret = %d", ret);
-        usleep(bytes * 1000000 / audio_stream_out_frame_size(stream) /
+        usleep((int64_t)bytes * 1000000ll / audio_stream_out_frame_size(stream) /
                out_get_sample_rate(&stream->common));
     }
 
