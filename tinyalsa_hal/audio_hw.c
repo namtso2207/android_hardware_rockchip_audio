@@ -59,6 +59,8 @@
 #define CHL_VALID (1 << 0)
 #define CH_CHECK (1 << 2)
 
+#define HDMI_BITSTREAM_BYPASS "ELD Bypass"
+
 struct SurroundFormat {
     audio_format_t format;
     const char *value;
@@ -818,6 +820,39 @@ static bool is_multi_pcm(struct stream_out *out)
 }
 
 /**
+ * @brief mixer_hdmi_set_force_bypass
+ * force hdmi to bypass even if hdmi not support bypass
+ */
+static int mixer_hdmi_set_force_bypass(struct stream_out *out)
+{
+    int ret = 0;
+    struct mixer *pMixer = NULL;
+    struct mixer_ctl *pctl;
+    struct audio_device *adev = out->dev;
+
+    if (out->device & AUDIO_DEVICE_OUT_AUX_DIGITAL) {
+        pMixer = mixer_open_legacy(adev->dev_out[SND_OUT_SOUND_CARD_HDMI].card);
+        if (!pMixer) {
+            return ret;
+        }
+
+        pctl = mixer_get_control(pMixer, HDMI_BITSTREAM_BYPASS, 0);
+        if (pctl != NULL) {
+            // do not care edid
+            if (is_bitstream(out)) {
+                ret = mixer_ctl_set_val(pctl, 1);
+            } else {
+                ret = mixer_ctl_set_val(pctl, 0);
+            }
+        }
+        mixer_close_legacy(pMixer);
+    }
+
+    return ret;
+}
+
+
+/**
  * @brief mixer_mode_set
  * for rk3399 audio output mixer mode set
  * @param out
@@ -964,7 +999,7 @@ static int start_output_stream(struct stream_out *out)
             device =adev->dev_out[SND_OUT_SOUND_CARD_HDMI].device;
             if (card != (int)SND_OUT_SOUND_CARD_UNKNOWN) {
 
-#ifndef IEC958_FORAMT         
+#ifndef IEC958_FORAMT
 #ifdef  USE_DRM
                 // set audio mode
                 ret = mixer_mode_set(out);
@@ -973,7 +1008,7 @@ static int start_output_stream(struct stream_out *out)
                 }
 #endif
 #endif
-
+                mixer_hdmi_set_force_bypass(out);
                 out->pcm[SND_OUT_SOUND_CARD_HDMI] = pcm_open(card, device,
                                                     PCM_OUT | PCM_MONOTONIC, &out->config);
                 if (out->pcm[SND_OUT_SOUND_CARD_HDMI] &&
