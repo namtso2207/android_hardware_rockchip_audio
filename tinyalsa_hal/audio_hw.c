@@ -3297,7 +3297,7 @@ static int adev_open_output_stream(struct audio_hw_device *dev,
                     (config->sample_rate == 44100)) {
                 out->config.rate = config->sample_rate;
                 out->config.format = PCM_FORMAT_S16_LE;
-                out->config.period_size = 2048;
+                out->config.period_size = config->sample_rate/100; // 10ms
             } else {
                 out->config.rate = 44100;
                 ALOGE("spdif passthrough samplerate %d is unsupport",config->sample_rate);
