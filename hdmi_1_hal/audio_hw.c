@@ -37,7 +37,7 @@
  */
 
 //#define LOG_NDEBUG 0
-#define LOG_TAG "AudioHardwareTiny"
+#define LOG_TAG "modules.hdmi_1.audio_hal"
 
 #include "alsa_audio.h"
 #include "audio_hw.h"
@@ -64,7 +64,6 @@ struct SurroundFormat {
     const char *value;
 };
 
-
 const struct SurroundFormat sSurroundFormat[] = {
     {AUDIO_FORMAT_AC3,"AUDIO_FORMAT_AC3"},
     {AUDIO_FORMAT_E_AC3,"AUDIO_FORMAT_E_AC3"},
@@ -73,11 +72,6 @@ const struct SurroundFormat sSurroundFormat[] = {
     {AUDIO_FORMAT_AAC_LC,"AUDIO_FORMAT_AAC_LC"},
     {AUDIO_FORMAT_DOLBY_TRUEHD,"AUDIO_FORMAT_DOLBY_TRUEHD"},
     {AUDIO_FORMAT_AC4,"AUDIO_FORMAT_E_AC3_JOC"}
-};
-
-enum SOUND_CARD_OWNER{
-    SOUND_CARD_HDMI = 0,
-    SOUND_CARD_SPDIF = 1,
 };
 
 /*
@@ -111,13 +105,6 @@ FILE *in_debug;
 int in_dump(const struct audio_stream *stream, int fd);
 int out_dump(const struct audio_stream *stream, int fd);
 
-/**
- * @brief get_output_device_id
- *
- * @param device
- *
- * @returns
- */
 int get_output_device_id(audio_devices_t device)
 {
     if (device == AUDIO_DEVICE_NONE)
@@ -152,13 +139,6 @@ int get_output_device_id(audio_devices_t device)
     }
 }
 
-/**
- * @brief get_input_source_id
- *
- * @param source
- *
- * @returns
- */
 int get_input_source_id(audio_source_t source)
 {
     switch (source) {
@@ -196,15 +176,6 @@ static void force_non_hdmi_out_standby(struct audio_device *adev)
     }
 }
 
-
-
-/**
- * @brief getOutputRouteFromDevice
- *
- * @param device
- *
- * @returns
- */
 unsigned getOutputRouteFromDevice(uint32_t device)
 {
     switch (device) {
@@ -221,38 +192,21 @@ unsigned getOutputRouteFromDevice(uint32_t device)
     case AUDIO_DEVICE_OUT_BLUETOOTH_SCO_HEADSET:
     case AUDIO_DEVICE_OUT_BLUETOOTH_SCO_CARKIT:
         return BLUETOOTH_NORMAL_ROUTE;
-    case AUDIO_DEVICE_OUT_AUX_DIGITAL:
+    case AUDIO_DEVICE_OUT_HDMI_1:
         return HDMI_NORMAL_ROUTE;
     default:
         return PLAYBACK_OFF_ROUTE;
     }
 }
 
-/**
- * @brief getVoiceRouteFromDevice
- *
- * @param device
- *
- * @returns
- */
 uint32_t getVoiceRouteFromDevice(uint32_t device)
 {
     ALOGE("not support now");
     return 0;
 }
 
-/**
- * @brief getInputRouteFromDevice
- *
- * @param device
- *
- * @returns
- */
 uint32_t getInputRouteFromDevice(uint32_t device)
 {
-    /*if (mMicMute) {
-        return CAPTURE_OFF_ROUTE;
-    }*/
     ALOGE("%s:device:%x",__FUNCTION__,device);
     switch (device) {
     case AUDIO_DEVICE_IN_BUILTIN_MIC:
@@ -270,13 +224,6 @@ uint32_t getInputRouteFromDevice(uint32_t device)
     }
 }
 
-/**
- * @brief getRouteFromDevice
- *
- * @param device
- *
- * @returns
- */
 uint32_t getRouteFromDevice(uint32_t device)
 {
     if (device & AUDIO_DEVICE_BIT_IN)
@@ -285,77 +232,9 @@ uint32_t getRouteFromDevice(uint32_t device)
         return getOutputRouteFromDevice(device);
 }
 
-struct dev_proc_info SPEAKER_OUT_NAME[] = /* add codes& dai name here*/
-{
-    {"realtekrt5616c", NULL,},
-    {"realtekrt5651co", "rt5651-aif1",},
-    {"realtekrt5670c", NULL,},
-    {"realtekrt5672c", NULL,},
-    {"realtekrt5678co", NULL,},
-    {"rkhdmianalogsnd", NULL,},
-    {"rockchipcx2072x", NULL,},
-    {"rockchipes8316c", NULL,},
-    {"rockchipes8323c", NULL,},
-    {"rockchipes8388c", NULL,},
-    {"rockchipes8388", NULL,},
-    {"rockchipes8396c", NULL,},
-    {"rockchiprk", NULL, },
-    {"rockchiprk809co", NULL,},
-    {"rockchiprk817co", NULL,},
-    {"rockchiprt5640c", "rt5640-aif1",},
-    {"rockchiprt5670c", NULL,},
-    {"rockchiprt5672c", NULL,},
-    {NULL, NULL}, /* Note! Must end with NULL, else will cause crash */
-};
-
 struct dev_proc_info HDMI_OUT_NAME[] =
 {
-    {"realtekrt5651co", "i2s-hifi",},
-    {"realtekrt5670co", "i2s-hifi",},
-    {"rkhdmidpsound", NULL,},
-    {"hdmisound", NULL},
-    {"rockchiphdmi", NULL,},
     {"rockchiphdmi1", NULL,},
-    {"rockchiphdmi0", NULL,},
-    {"rockchiprt5640c", "i2s-hifi",},
-    {NULL, NULL}, /* Note! Must end with NULL, else will cause crash */
-};
-
-
-struct dev_proc_info SPDIF_OUT_NAME[] =
-{
-    {"ROCKCHIPSPDIF", "dit-hifi",},
-    {"rockchipspdif", NULL,},
-    {"rockchipcdndp", NULL,},
-    {NULL, NULL}, /* Note! Must end with NULL, else will cause crash */
-};
-
-struct dev_proc_info BT_OUT_NAME[] =
-{
-    {"rockchipbt", NULL,},
-    {NULL, NULL}, /* Note! Must end with NULL, else will cause crash */
-};
-
-struct dev_proc_info MIC_IN_NAME[] =
-{
-    {"realtekrt5616c", NULL,},
-    {"realtekrt5651co", "rt5651-aif1",},
-    {"realtekrt5670c", NULL,},
-    {"realtekrt5672c", NULL,},
-    {"realtekrt5678co", NULL,},
-    {"rockchipes8316c", NULL,},
-    {"rockchipes8323c", NULL,},
-    {"rockchipes8388c", NULL,},
-    {"rockchipes8388", NULL,},
-    {"rockchipes8396c", NULL,},
-    {"rockchipes7210", NULL,},
-    {"rockchipes7243", NULL,},
-    {"rockchiprk", NULL, },
-    {"rockchiprk809co", NULL,},
-    {"rockchiprk817co", NULL,},
-    {"rockchiprt5640c", NULL,},
-    {"rockchiprt5670c", NULL,},
-    {"rockchiprt5672c", NULL,},
     {NULL, NULL}, /* Note! Must end with NULL, else will cause crash */
 };
 
@@ -364,12 +243,6 @@ struct dev_proc_info HDMI_IN_NAME[] =
     {"realtekrt5651co", "tc358749x-audio"},
     {"hdmiin", NULL},
     {"rockchiphdmirx", NULL},
-    {NULL, NULL}, /* Note! Must end with NULL, else will cause crash */
-};
-
-struct dev_proc_info BT_IN_NAME[] =
-{
-    {"rockchipbt", NULL},
     {NULL, NULL}, /* Note! Must end with NULL, else will cause crash */
 };
 
@@ -602,15 +475,13 @@ static bool is_specified_in_sound_card(char *id, struct dev_proc_info *match)
     return false;
 }
 
-static void set_default_dev_info( struct dev_info *info, int size, int rid)
+static void set_default_dev_info( struct dev_info *info, int rid)
 {
-    for(int i =0; i < size; i++) {
-        if (rid) {
-            info[i].id = NULL;
-        }
-        info[i].card = (int)SND_OUT_SOUND_CARD_UNKNOWN;
-        info[i].score = 0;
+    if (rid) {
+        info->id = NULL;
     }
+    info->card = (int)SND_OUT_SOUND_CARD_UNKNOWN;
+    info->score = 0;
 }
 
 static void dumpdev_info(const char *tag, struct dev_info  *devinfo, int count)
@@ -642,7 +513,7 @@ static void read_out_sound_card(struct stream_out *out)
         return ;
     }
     device = out->dev;
-    set_default_dev_info(device->dev_out, SND_OUT_SOUND_CARD_UNKNOWN, 0);
+    set_default_dev_info(&device->dev_out, 0);
     for (card = 0; card < SNDRV_CARDS; card++) {
         sprintf(str, "proc/asound/card%d/id", card);
         if (access(str, 0)) {
@@ -663,12 +534,9 @@ static void read_out_sound_card(struct stream_out *out)
             id[len] = '\0';
         }
         ALOGD("card%d id:%s", card, id);
-        get_specified_out_dev(&device->dev_out[SND_OUT_SOUND_CARD_SPEAKER], card, id, SPEAKER_OUT_NAME);
-        get_specified_out_dev(&device->dev_out[SND_OUT_SOUND_CARD_HDMI], card, id, HDMI_OUT_NAME);
-        get_specified_out_dev(&device->dev_out[SND_OUT_SOUND_CARD_SPDIF], card, id, SPDIF_OUT_NAME);
-        get_specified_out_dev(&device->dev_out[SND_OUT_SOUND_CARD_BT], card, id, BT_OUT_NAME);
+        get_specified_out_dev(&device->dev_out, card, id, HDMI_OUT_NAME);
     }
-    dumpdev_info("out", device->dev_out, SND_OUT_SOUND_CARD_MAX);
+    dumpdev_info("out", &device->dev_out, 1);
     return ;
 }
 
@@ -689,7 +557,7 @@ static void read_in_sound_card(struct stream_in *in)
         return ;
     }
     device = in->dev;
-    set_default_dev_info(device->dev_in, SND_IN_SOUND_CARD_UNKNOWN, 0);
+    set_default_dev_info(&device->dev_in, 0);
     for (card = 0; card < SNDRV_CARDS; card++) {
         sprintf(str, "proc/asound/card%d/id", card);
         if(access(str, 0)) {
@@ -709,12 +577,10 @@ static void read_in_sound_card(struct stream_in *in)
             len--;
            id[len] = '\0';
         }
-        get_specified_in_dev(&device->dev_in[SND_IN_SOUND_CARD_MIC], card, id, MIC_IN_NAME);
         /* set HDMI audio input info if need hdmi audio input */
-        get_specified_in_dev(&device->dev_in[SND_IN_SOUND_CARD_HDMI], card, id, HDMI_IN_NAME);
-        get_specified_in_dev(&device->dev_in[SND_IN_SOUND_CARD_BT], card, id, BT_IN_NAME);
+        get_specified_in_dev(&device->dev_in, card, id, HDMI_IN_NAME);
     }
-    dumpdev_info("in", device->dev_in, SND_IN_SOUND_CARD_MAX);
+    dumpdev_info("in", &device->dev_in, 1);
     return ;
 }
 
@@ -817,13 +683,6 @@ static bool is_multi_pcm(struct stream_out *out)
     return multi;
 }
 
-/**
- * @brief mixer_mode_set
- * for rk3399 audio output mixer mode set
- * @param out
- *
- * @return
- */
 static int mixer_mode_set(struct stream_out *out)
 {
     int ret = 0;
@@ -839,10 +698,10 @@ static int mixer_mode_set(struct stream_out *out)
      * 2) NLPCM: the stream is bitstream format, AC3/EAC3/DTS use this format
      * 3) HDR: the stream is bitstream format, TrueHD/Atoms/DTS-HD/DTS-X use this format.
      */
-    if (out->device & AUDIO_DEVICE_OUT_AUX_DIGITAL) {
-        pMixer = mixer_open_legacy(adev->dev_out[SND_OUT_SOUND_CARD_HDMI].card);
+    if (out->device & AUDIO_DEVICE_OUT_HDMI_1) {
+        pMixer = mixer_open_legacy(adev->dev_out.card);
         if (!pMixer) {
-            ALOGE("mMixer is a null point %s %d,CARD = %d",__func__, __LINE__,adev->dev_out[SND_OUT_SOUND_CARD_HDMI].card);
+            ALOGE("mMixer is a null point %s %d,CARD = %d",__func__, __LINE__,adev->dev_out.card);
             return ret;
         }
         pctl = mixer_get_control(pMixer,"AUDIO MODE",0 );
@@ -872,7 +731,6 @@ static int mixer_mode_set(struct stream_out *out)
     return ret;
 }
 
-
 static void open_sound_card_policy(struct stream_out *out)
 {
     if (out == NULL) {
@@ -890,32 +748,24 @@ static void open_sound_card_policy(struct stream_out *out)
     bool support = ((out->config.rate == 44100) || (out->config.rate == 48000));
     struct audio_device *adev = out->dev;
     if (support) {
-        if(adev->dev_out[SND_OUT_SOUND_CARD_SPEAKER].card != SND_OUT_SOUND_CARD_UNKNOWN) {
-            out->device |= AUDIO_DEVICE_OUT_SPEAKER;
-        }
-
-        if(adev->dev_out[SND_OUT_SOUND_CARD_HDMI].card != SND_OUT_SOUND_CARD_UNKNOWN) {
+        if(adev->dev_out.card != SND_OUT_SOUND_CARD_UNKNOWN) {
             /*
              * hdmi is taken by direct/mulit pcm output
              */
             if(adev->outputs[OUTPUT_HDMI_MULTI] != NULL) {
-                out->device &= ~AUDIO_DEVICE_OUT_AUX_DIGITAL;
+                out->device &= ~AUDIO_DEVICE_OUT_HDMI_1;
             } else {
-                out->device |= AUDIO_DEVICE_OUT_AUX_DIGITAL;
+                out->device |= AUDIO_DEVICE_OUT_HDMI_1;
             }
-        }
-
-        if(adev->dev_out[SND_OUT_SOUND_CARD_SPDIF].card != SND_OUT_SOUND_CARD_UNKNOWN){
-           out->device |= AUDIO_DEVICE_OUT_SPDIF;
         }
     }
 
     // some specail config for chips
 #ifdef RK3288
     /*3288's hdmi & codec use the same i2s,so only config the codec card*/
-    audio_devices_t devices = (AUDIO_DEVICE_OUT_AUX_DIGITAL|AUDIO_DEVICE_OUT_SPEAKER);
+    audio_devices_t devices = (AUDIO_DEVICE_OUT_HDMI_1|AUDIO_DEVICE_OUT_SPEAKER);
     if ((out->device & devices) == devices) {
-        out->device &= ~AUDIO_DEVICE_OUT_AUX_DIGITAL;
+        out->device &= ~AUDIO_DEVICE_OUT_HDMI_1;
     }
 #endif
 }
@@ -934,8 +784,6 @@ static int start_output_stream(struct stream_out *out)
     int ret = 0;
     int card = (int)SND_OUT_SOUND_CARD_UNKNOWN;
     int device = 0;
-    // set defualt value to true for compatible with mid project
-
 
     ALOGD("%s:%d out = %p,device = 0x%x,outputs[OUTPUT_HDMI_MULTI] = %p",__FUNCTION__,__LINE__,out,out->device,adev->outputs[OUTPUT_HDMI_MULTI]);
     if (out == adev->outputs[OUTPUT_HDMI_MULTI]) {
@@ -955,17 +803,13 @@ static int start_output_stream(struct stream_out *out)
 
     out_dump(out, 0);
 
-#if SUPPORT_MULTIAUDIO
-    out->device &= ~(AUDIO_DEVICE_OUT_AUX_DIGITAL | AUDIO_DEVICE_OUT_SPDIF);
-#endif
+    if (out->device & AUDIO_DEVICE_OUT_HDMI_1) {
+        audio_devices_t route_device = out->device & AUDIO_DEVICE_OUT_HDMI_1;
+        route_pcm_card_open(adev->dev_out.card, getRouteFromDevice(route_device));
 
-    if (out->device & AUDIO_DEVICE_OUT_AUX_DIGITAL) {
-        audio_devices_t route_device = out->device & AUDIO_DEVICE_OUT_AUX_DIGITAL;
-        route_pcm_card_open(adev->dev_out[SND_OUT_SOUND_CARD_HDMI].card, getRouteFromDevice(route_device));
-
-        if (adev->owner[SOUND_CARD_HDMI] == NULL) {
-            card = adev->dev_out[SND_OUT_SOUND_CARD_HDMI].card;
-            device =adev->dev_out[SND_OUT_SOUND_CARD_HDMI].device;
+        if (adev->owner == NULL) {
+            card = adev->dev_out.card;
+            device =adev->dev_out.device;
             if (card != (int)SND_OUT_SOUND_CARD_UNKNOWN) {
 
 #ifndef IEC958_FORAMT         
@@ -978,13 +822,11 @@ static int start_output_stream(struct stream_out *out)
 #endif
 #endif
 
-                out->pcm[SND_OUT_SOUND_CARD_HDMI] = pcm_open(card, device,
-                                                    PCM_OUT | PCM_MONOTONIC, &out->config);
-                if (out->pcm[SND_OUT_SOUND_CARD_HDMI] &&
-                        !pcm_is_ready(out->pcm[SND_OUT_SOUND_CARD_HDMI])) {
+                out->pcm = pcm_open(card, device, PCM_OUT | PCM_MONOTONIC, &out->config);
+                if (out->pcm && !pcm_is_ready(out->pcm)) {
                     ALOGE("pcm_open(PCM_CARD_HDMI) failed: %s, card number = %d",
-                          pcm_get_error(out->pcm[SND_OUT_SOUND_CARD_HDMI]),card);
-                    pcm_close(out->pcm[SND_OUT_SOUND_CARD_HDMI]);
+                          pcm_get_error(out->pcm),card);
+                    pcm_close(out->pcm);
                     return -ENOMEM;
                 }
 
@@ -995,57 +837,7 @@ static int start_output_stream(struct stream_out *out)
                 }
 
                 if (is_multi_pcm(out) || is_bitstream(out)){
-                    adev->owner[SOUND_CARD_HDMI] = (int*)out;
-                }
-            }
-        } else {
-            ALOGD("The current HDMI is DVI mode");
-            out->device |= AUDIO_DEVICE_OUT_SPEAKER;
-        }
-    }
-
-    if (out->device & (AUDIO_DEVICE_OUT_SPEAKER |
-                       AUDIO_DEVICE_OUT_WIRED_HEADSET |
-                       AUDIO_DEVICE_OUT_WIRED_HEADPHONE |
-                       AUDIO_DEVICE_OUT_ALL_SCO)) {
-        audio_devices_t route_device = out->device & (AUDIO_DEVICE_OUT_SPEAKER |
-                                                      AUDIO_DEVICE_OUT_WIRED_HEADSET |
-                                                      AUDIO_DEVICE_OUT_WIRED_HEADPHONE |
-                                                      AUDIO_DEVICE_OUT_ALL_SCO);
-        route_pcm_card_open(adev->dev_out[SND_OUT_SOUND_CARD_SPEAKER].card, getRouteFromDevice(route_device));
-        card = adev->dev_out[SND_OUT_SOUND_CARD_SPEAKER].card;
-        device = adev->dev_out[SND_OUT_SOUND_CARD_SPEAKER].device;
-        if(card != (int)SND_OUT_SOUND_CARD_UNKNOWN) {
-            out->pcm[SND_OUT_SOUND_CARD_SPEAKER] = pcm_open(card, device,
-                                          PCM_OUT | PCM_MONOTONIC, &out->config);
-            if (out->pcm[SND_OUT_SOUND_CARD_SPEAKER] && !pcm_is_ready(out->pcm[SND_OUT_SOUND_CARD_SPEAKER])) {
-                ALOGE("pcm_open(PCM_CARD) failed: %s,card number = %d",
-                      pcm_get_error(out->pcm[SND_OUT_SOUND_CARD_SPEAKER]),card);
-                pcm_close(out->pcm[SND_OUT_SOUND_CARD_SPEAKER]);
-                return -ENOMEM;
-            }
-        }
-
-    }
-
-    if (out->device & AUDIO_DEVICE_OUT_SPDIF) {
-        if (adev->owner[SOUND_CARD_SPDIF] == NULL){
-            card = adev->dev_out[SND_OUT_SOUND_CARD_SPDIF].card;
-            device = adev->dev_out[SND_OUT_SOUND_CARD_SPDIF].device;
-            if(card != (int)SND_OUT_SOUND_CARD_UNKNOWN) {
-                out->pcm[SND_OUT_SOUND_CARD_SPDIF] = pcm_open(card, device,
-                                                    PCM_OUT | PCM_MONOTONIC, &out->config);
-
-                if (out->pcm[SND_OUT_SOUND_CARD_SPDIF] &&
-                        !pcm_is_ready(out->pcm[SND_OUT_SOUND_CARD_SPDIF])) {
-                    ALOGE("pcm_open(PCM_CARD_SPDIF) failed: %s,card number = %d",
-                          pcm_get_error(out->pcm[SND_OUT_SOUND_CARD_SPDIF]),card);
-                    pcm_close(out->pcm[SND_OUT_SOUND_CARD_SPDIF]);
-                    return -ENOMEM;
-                }
-
-                if (is_multi_pcm(out) || is_bitstream(out)){
-                    adev->owner[SOUND_CARD_SPDIF] = (int*)out;
+                    adev->owner = (int*)out;
                 }
             }
         }
@@ -1056,14 +848,6 @@ static int start_output_stream(struct stream_out *out)
     return 0;
 }
 
-/**
- * @brief get_next_buffer
- *
- * @param buffer_provider
- * @param buffer
- *
- * @returns
- */
 static int get_next_buffer(struct resampler_buffer_provider *buffer_provider,
                            struct resampler_buffer* buffer)
 {
@@ -1134,12 +918,6 @@ static int get_next_buffer(struct resampler_buffer_provider *buffer_provider,
 
 }
 
-/**
- * @brief release_buffer
- *
- * @param buffer_provider
- * @param buffer
- */
 static void release_buffer(struct resampler_buffer_provider *buffer_provider,
                            struct resampler_buffer* buffer)
 {
@@ -1208,9 +986,9 @@ static int get_hdmiin_audio_rate(struct audio_device *adev)
     }
 
     // if hdmiin connect to codec, use 44100 sample rate
-    if (adev->dev_out[SND_IN_SOUND_CARD_HDMI].card
-            == adev->dev_out[SND_OUT_SOUND_CARD_SPEAKER].card)
-        rate = 44100;
+    // if (adev->dev_out[SND_IN_SOUND_CARD_HDMI].card
+    //         == adev->dev_out[SND_OUT_SOUND_CARD_SPEAKER].card)
+    //     rate = 44100;
 
     return rate;
 }
@@ -1260,66 +1038,8 @@ static int start_input_stream(struct stream_in *in)
     channel_check_start(in);
     in_dump(in, 0);
     read_in_sound_card(in);
-    route_pcm_card_open(adev->dev_in[SND_IN_SOUND_CARD_MIC].card,
-                        getRouteFromDevice(in->device | AUDIO_DEVICE_BIT_IN));
-#ifdef RK3399_LAPTOP //HARD CODE FIXME
-    if ((in->device & AUDIO_DEVICE_IN_BLUETOOTH_SCO_HEADSET) &&
-            (adev->mode == AUDIO_MODE_IN_COMMUNICATION)) {
-        in->config = &pcm_config_in_bt;
-        card = adev->dev_in[SND_IN_SOUND_CARD_BT].card;
-        device =  adev->dev_in[SND_IN_SOUND_CARD_BT].device;
-        if(card != SND_IN_SOUND_CARD_UNKNOWN){
-            in->pcm = pcm_open(card, device, PCM_IN, in->config);
-            if (in->resampler) {
-                release_resampler(in->resampler);
 
-                in->buf_provider.get_next_buffer = get_next_buffer;
-                in->buf_provider.release_buffer = release_buffer;
-
-                ret = create_resampler(8000,
-                                       in->requested_rate,
-                                       audio_channel_count_from_in_mask(in->channel_mask),
-                                       RESAMPLER_QUALITY_DEFAULT,
-                                       &in->buf_provider,
-                                       &in->resampler);
-                if (ret != 0) {
-                    ret = -EINVAL;
-                }
-            }
-        } else {
-            ALOGE("%s: %d,the card number of bt is = %d",__FUNCTION__,__LINE__,card);
-            return -EINVAL;
-        }
-    } else {
-        in->config = &pcm_config_in;
-        card = adev->dev_in[SND_IN_SOUND_CARD_MIC].card;
-        device =  adev->dev_in[SND_IN_SOUND_CARD_MIC].device;
-        if (card != SND_IN_SOUND_CARD_UNKNOWN) {
-            in->pcm = pcm_open(card, device, PCM_IN, in->config);
-
-            if (in->resampler) {
-                release_resampler(in->resampler);
-
-                in->buf_provider.get_next_buffer = get_next_buffer;
-                in->buf_provider.release_buffer = release_buffer;
-
-                ret = create_resampler(48000,
-                                       in->requested_rate,
-                                       audio_channel_count_from_in_mask(in->channel_mask),
-                                       RESAMPLER_QUALITY_DEFAULT,
-                                       &in->buf_provider,
-                                       &in->resampler);
-                if (ret != 0) {
-                    ret = -EINVAL;
-                }
-            }
-        } else {
-            ALOGE("%s: %d,the card number of mic is %d",__FUNCTION__,__LINE__,card);
-            return -EINVAL;
-        }
-    }
-#else
-    card = (int)adev->dev_in[SND_IN_SOUND_CARD_HDMI].card;
+    card = (int)adev->dev_in.card;
     if (in->device & AUDIO_DEVICE_IN_HDMI && (card != (int)SND_OUT_SOUND_CARD_UNKNOWN)) {
         if (get_hdmiin_audio_info(adev, "audio_present", &hdmiin_present)) {
             if (!hdmiin_present) {
@@ -1339,37 +1059,8 @@ static int start_input_stream(struct stream_in *in)
         if (in->config->rate != in->requested_rate) {
             ret = create_resampler_helper(in, in->config->rate);
         }
-    } else if (in->device & AUDIO_DEVICE_IN_BUILTIN_MIC ||
-               in->device & AUDIO_DEVICE_IN_WIRED_HEADSET) {
-        card = adev->dev_in[SND_IN_SOUND_CARD_MIC].card;
-        device =  adev->dev_in[SND_IN_SOUND_CARD_MIC].device;
-        in->pcm = pcm_open(card, device, PCM_IN, in->config);
-#ifdef RK_DENOISE_ENABLE
-        {
-            int ch = in->config->channels;
-            int period = in->config->period_size;
-            int rate = in->config->rate;
-            int type = 0;
-            {
-                char value[PROPERTY_VALUE_MAX];
-                property_get("vendor.audio.anr.speex", value, "0");
-                type = atoi(value);
-            }
-            if (in->mDenioseState)
-                rkdenoise_destroy(in->mDenioseState);
-            in->mDenioseState = rkdenoise_create(rate, ch, period, type ? ALG_SPX : ALG_SKV);
-            if (in->mDenioseState == NULL) {
-                ALOGW("crate rkdenoise failed!!!");
-            }
-        }
-#endif
+    } 
 
-    } else {
-        card = adev->dev_in[SND_IN_SOUND_CARD_BT].card;
-        device = adev->dev_in[SND_IN_SOUND_CARD_BT].device;
-        in->pcm = pcm_open(card, device, PCM_IN, in->config);
-    }
-#endif
     if (in->pcm && !pcm_is_ready(in->pcm)) {
         ALOGE("pcm_open() failed: %s", pcm_get_error(in->pcm));
         pcm_close(in->pcm);
@@ -1395,16 +1086,6 @@ static int start_input_stream(struct stream_in *in)
     return 0;
 }
 
-/**
- * @brief get_input_buffer_size
- *
- * @param sample_rate
- * @param format
- * @param channel_count
- * @param is_low_latency
- *
- * @returns
- */
 static size_t get_input_buffer_size(unsigned int sample_rate,
                                     audio_format_t format,
                                     unsigned int channel_count,
@@ -1476,13 +1157,6 @@ frame_count :
     return frames_wr;
 }
 
-/**
- * @brief out_get_sample_rate
- *
- * @param stream
- *
- * @returns
- */
 static uint32_t out_get_sample_rate(const struct audio_stream *stream)
 {
     struct stream_out *out = (struct stream_out *)stream;
@@ -1499,26 +1173,11 @@ static uint32_t out_get_sample_rate(const struct audio_stream *stream)
     }
 }
 
-/**
- * @brief out_set_sample_rate
- *
- * @param stream
- * @param rate
- *
- * @returns
- */
 static int out_set_sample_rate(struct audio_stream *stream, uint32_t rate)
 {
     return -ENOSYS;
 }
 
-/**
- * @brief out_get_buffer_size
- *
- * @param stream
- *
- * @returns
- */
 static size_t out_get_buffer_size(const struct audio_stream *stream)
 {
     struct stream_out *out = (struct stream_out *)stream;
@@ -1527,13 +1186,6 @@ static size_t out_get_buffer_size(const struct audio_stream *stream)
            audio_stream_out_frame_size((const struct audio_stream_out *)stream);
 }
 
-/**
- * @brief out_get_channels
- *
- * @param stream
- *
- * @returns
- */
 static audio_channel_mask_t out_get_channels(const struct audio_stream *stream)
 {
     struct stream_out *out = (struct stream_out *)stream;
@@ -1546,13 +1198,6 @@ static audio_channel_mask_t out_get_channels(const struct audio_stream *stream)
     }
 }
 
-/**
- * @brief out_get_format
- *
- * @param stream
- *
- * @returns
- */
 static audio_format_t out_get_format(const struct audio_stream *stream)
 {
     struct stream_out *out = (struct stream_out *)stream;
@@ -1565,14 +1210,6 @@ static audio_format_t out_get_format(const struct audio_stream *stream)
     }
 }
 
-/**
- * @brief out_set_format
- *
- * @param stream
- * @param format
- *
- * @returns
- */
 static int out_set_format(struct audio_stream *stream, audio_format_t format)
 {
     return -ENOSYS;
@@ -1620,11 +1257,9 @@ static void do_out_standby(struct stream_out *out)
     int i;
     ALOGD("%s,out = %p,device = 0x%x",__FUNCTION__,out,out->device);
     if (!out->standby) {
-        for (i = 0; i < SND_OUT_SOUND_CARD_MAX; i++) {
-            if (out->pcm[i]) {
-                pcm_close(out->pcm[i]);
-                out->pcm[i] = NULL;
-            }
+        if (out->pcm) {
+            pcm_close(out->pcm);
+            out->pcm = NULL;
         }
         out->standby = true;
         out->nframes = 0;
@@ -1652,24 +1287,14 @@ static void do_out_standby(struct stream_out *out)
             route_pcm_open(getRouteFromDevice(adev->out_device));
             ALOGD("change device");
         }
-        if(adev->owner[SOUND_CARD_HDMI] == (int*)out){
-            adev->owner[SOUND_CARD_HDMI] = NULL;
-        }
-
-        if(adev->owner[SOUND_CARD_SPDIF] == (int*)out){
-            adev->owner[SOUND_CARD_SPDIF] = NULL;
+        if(adev->owner == (int*)out){
+            adev->owner = NULL;
         }
 
         bitstream_destory(&out->bistream);
     }
 }
 
-/**
- * @brief lock_all_outputs
- * lock outputs list, all output streams, and device
- *
- * @param adev
- */
 static void lock_all_outputs(struct audio_device *adev)
 {
     enum output_type type;
@@ -1682,13 +1307,6 @@ static void lock_all_outputs(struct audio_device *adev)
     pthread_mutex_lock(&adev->lock);
 }
 
-/**
- * @brief unlock_all_outputs
- * unlock device, all output streams (except specified stream), and outputs list
- *
- * @param adev
- * @param except
- */
 static void unlock_all_outputs(struct audio_device *adev, struct stream_out *except)
 {
     /* unlock order is irrelevant, but for cleanliness we unlock in reverse order */
@@ -1702,13 +1320,6 @@ static void unlock_all_outputs(struct audio_device *adev, struct stream_out *exc
     pthread_mutex_unlock(&adev->lock_outputs);
 }
 
-/**
- * @brief out_standby
- *
- * @param stream
- *
- * @returns
- */
 static int out_standby(struct audio_stream *stream)
 {
     struct stream_out *out = (struct stream_out *)stream;
@@ -1723,14 +1334,6 @@ static int out_standby(struct audio_stream *stream)
     return 0;
 }
 
-/**
- * @brief out_dump
- *
- * @param stream
- * @param fd
- *
- * @returns
- */
 int out_dump(const struct audio_stream *stream, int fd)
 {
     struct stream_out *out = (struct stream_out *)stream;
@@ -1742,14 +1345,7 @@ int out_dump(const struct audio_stream *stream, int fd)
     ALOGD("out->PreiodSize : %d", out->config.period_size);
     return 0;
 }
-/**
- * @brief out_set_parameters
- *
- * @param stream
- * @param kvpairs
- *
- * @returns
- */
+
 static int out_set_parameters(struct audio_stream *stream, const char *kvpairs)
 {
     struct stream_out *out = (struct stream_out *)stream;
@@ -1793,7 +1389,7 @@ static int out_set_parameters(struct audio_stream *stream, const char *kvpairs)
         val = atoi(value);
         /* Don't switch HDMI audio in box products */
         if ((val != 0) && ((out->device & val) != val) ||
-            (val != 0) && !(out->device & AUDIO_DEVICE_OUT_HDMI)) {
+            (val != 0) && !(out->device & AUDIO_DEVICE_OUT_HDMI_1)) {
             /* Force standby if moving to/from SPDIF or if the output
              * device changes when in SPDIF mode */
             if (((val & AUDIO_DEVICE_OUT_DGTL_DOCK_HEADSET) ^
@@ -1834,7 +1430,6 @@ static int out_set_parameters(struct audio_stream *stream, const char *kvpairs)
  * Query supported formats. The response is a '|' separated list of strings from audio_format_t enum
  *  e.g: "sup_formats=AUDIO_FORMAT_PCM_16_BIT"
  */
-
 static int stream_get_parameter_formats(const struct audio_stream *stream,
                                     struct str_parms *query,
                                     struct str_parms *reply)
@@ -1860,7 +1455,6 @@ static int stream_get_parameter_formats(const struct audio_stream *stream,
  * audio_channel_mask_t enum
  * e.g: "sup_channels=AUDIO_CHANNEL_OUT_STEREO|AUDIO_CHANNEL_OUT_MONO"
  */
-
 static int stream_get_parameter_channels(struct str_parms *query,
                                     struct str_parms *reply,
                                     audio_channel_mask_t *supported_channel_masks)
@@ -1899,7 +1493,6 @@ static int stream_get_parameter_channels(struct str_parms *query,
  * Query supported sampling rates. The response is a '|' separated list of integer values
  * e.g: ""sup_sampling_rates=44100|48000"
  */
-
 static int stream_get_parameter_rates(struct str_parms *query,
                                 struct str_parms *reply,
                                 uint32_t *supported_sample_rates)
@@ -1931,14 +1524,6 @@ static int stream_get_parameter_rates(struct str_parms *query,
     return -1;
 }
 
-/**
- * @brief out_get_parameters
- *
- * @param stream
- * @param keys
- *
- * @returns
- */
 static char * out_get_parameters(const struct audio_stream *stream, const char *keys)
 {
     ALOGD("%s: keys = %s", __func__, keys);
@@ -1966,13 +1551,6 @@ static char * out_get_parameters(const struct audio_stream *stream, const char *
     return str;
 }
 
-/**
- * @brief out_get_latency
- *
- * @param stream
- *
- * @returns
- */
 static uint32_t out_get_latency(const struct audio_stream_out *stream)
 {
     struct stream_out *out = (struct stream_out *)stream;
@@ -1981,15 +1559,6 @@ static uint32_t out_get_latency(const struct audio_stream_out *stream)
            out->config.rate;
 }
 
-/**
- * @brief out_set_volume
- *
- * @param stream
- * @param left
- * @param right
- *
- * @returns
- */
 static int out_set_volume(struct audio_stream_out *stream, float left,
                           float right)
 {
@@ -2011,11 +1580,7 @@ static int out_set_volume(struct audio_stream_out *stream, float left,
     }
     return -ENOSYS;
 }
-/**
- * @brief dump_out_data
- *
- * @param buffer bytes
- */
+
 static void dump_out_data(const void* buffer,size_t bytes)
 {
     char value[PROPERTY_VALUE_MAX];
@@ -2083,7 +1648,6 @@ static void dump_in_data(const void* buffer, size_t bytes)
     }
 }
 
-
 static void check_hdmi_reconnect(struct stream_out *out)
 {
     if (out == NULL) {
@@ -2118,7 +1682,7 @@ static void check_hdmi_reconnect(struct stream_out *out)
      * Other part(maybe hwc) will config hdmi after it reviced the msg.
      * Audio must wait other part(maybe hwc) codes config hdmi finish, before send bitstream datas to hdmi
      */
-    if (out->snd_reopen && is_bitstream(out) && (out->device == AUDIO_DEVICE_OUT_AUX_DIGITAL)) {
+    if (out->snd_reopen && is_bitstream(out) && (out->device == AUDIO_DEVICE_OUT_HDMI_1)) {
 #ifdef USE_DRM
         const char* PATH = "/sys/class/drm/card0-HDMI-A-1/enabled";
 #else
@@ -2185,13 +1749,13 @@ static int bitstream_write_data(struct stream_out *out, void* buffer, size_t byt
 
     struct audio_device *adev = out->dev;
     int ret = 0;
-    if ((out->device & AUDIO_DEVICE_OUT_AUX_DIGITAL) && (is_multi_pcm(out) || is_bitstream(out))) {
-        int card = adev->dev_out[SND_OUT_SOUND_CARD_HDMI].card;
-        if ((card != SND_OUT_SOUND_CARD_UNKNOWN) && (out->pcm[SND_OUT_SOUND_CARD_HDMI] != NULL)) {
+    if ((out->device & AUDIO_DEVICE_OUT_HDMI_1) && (is_multi_pcm(out) || is_bitstream(out))) {
+        int card = adev->dev_out.card;
+        if ((card != SND_OUT_SOUND_CARD_UNKNOWN) && (out->pcm != NULL)) {
             if(out->config.format == PCM_FORMAT_S16_LE){
                 out_mute_data(out,buffer,bytes);
                 dump_out_data(buffer, bytes);
-                ret = pcm_write(out->pcm[SND_OUT_SOUND_CARD_HDMI], (void *)buffer, bytes);
+                ret = pcm_write(out->pcm, (void *)buffer, bytes);
             } else if(out->config.format == PCM_FORMAT_S24_LE ||
                      out->config.format == PCM_FORMAT_IEC958_SUBFRAME_LE){
                 char *outBuffer = NULL;
@@ -2200,7 +1764,7 @@ static int bitstream_write_data(struct stream_out *out, void* buffer, size_t byt
                 if (ret == 0 && outSize > 0) {
                     out_mute_data(out,(void*)outBuffer, outSize);
                     dump_out_data((void*)outBuffer, outSize);
-                    ret = pcm_write(out->pcm[SND_OUT_SOUND_CARD_HDMI], (void *)outBuffer, outSize);
+                    ret = pcm_write(out->pcm, (void *)outBuffer, outSize);
                 }
             }
         } else {
@@ -2291,16 +1855,6 @@ static void out_multi_pcm_process(struct stream_out *out, void * buffer, size_t 
     }
 }
 
-/**
- * @brief out_write
- *
- * @param stream
- * @param buffer
- * @param bytes
- *
- * @returns
- */
-
 static ssize_t out_write(struct audio_stream_out *stream, const void* buffer,
                          size_t bytes)
 {
@@ -2352,15 +1906,14 @@ false_alarm:
     }
 #endif
 
-    /* Write to all active PCMs */
-    if ((out->device & AUDIO_DEVICE_OUT_AUX_DIGITAL) && is_bitstream(out)) {
+    if ((out->device & AUDIO_DEVICE_OUT_HDMI_1) && is_bitstream(out)) {
         ret = bitstream_write_data(out, (void*)buffer, bytes);
         if(ret < 0) {
             goto exit;
         }
     } else {
         if(is_multi_pcm(out)) {
-            if(out->device == AUDIO_DEVICE_OUT_AUX_DIGITAL) {
+            if(out->device == AUDIO_DEVICE_OUT_HDMI_1) {
                 out_multi_pcm_process(out, buffer, bytes);
             }
         }
@@ -2368,37 +1921,12 @@ false_alarm:
         out_mute_data(out,(void*)buffer,bytes);
         dump_out_data(buffer, bytes);
         ret = -1;
-        for (i = 0; i < SND_OUT_SOUND_CARD_MAX; i++)
-            if (out->pcm[i]) {
-                if (i == SND_OUT_SOUND_CARD_BT) {
-                    // HARD CODE FIXME 48000 stereo -> 8000 stereo
-                    size_t inFrameCount = bytes/2/2;
-                    size_t outFrameCount = inFrameCount/6;
-                    int16_t out_buffer[outFrameCount*2];
-                    memset(out_buffer, 0x00, outFrameCount*2);
-
-                    out->resampler->resample_from_input(out->resampler,
-                                                        (const int16_t *)buffer,
-                                                        &inFrameCount,
-                                                        out_buffer,
-                                                        &outFrameCount);
-
-                    ret = pcm_write(out->pcm[i], (void *)out_buffer, outFrameCount*2*2);
-                    if (ret != 0)
-                        break;
-                } else {
-                    /*
-                     * do not write hdmi/spdif snd sound if they are taken by other bitstream/multi channle pcm stream
-                     */
-                    if(((i == SND_OUT_SOUND_CARD_HDMI) && (adev->owner[SOUND_CARD_HDMI] != (int*)out) && (adev->owner[SOUND_CARD_HDMI] != NULL)) ||
-                        ((i == SND_OUT_SOUND_CARD_SPDIF) && (adev->owner[SOUND_CARD_SPDIF] != (int*)out) && (adev->owner[SOUND_CARD_SPDIF] != NULL))){
-                        continue;
-                    }
-                    ret = pcm_write(out->pcm[i], (void *)buffer, bytes);
-                    if (ret != 0)
-                        break;
-                }
-            }
+        /*
+         * do not write hdmi snd sound if they are taken by other bitstream/multi channle pcm stream
+         */
+        if (out->pcm && adev->owner == NULL) {
+            ret = pcm_write(out->pcm, (void *)buffer, bytes);
+        }
     }
 exit:
     pthread_mutex_unlock(&out->lock);
@@ -2410,21 +1938,13 @@ final_exit:
     }
     if (ret != 0) {
         ALOGV("AudioData write  error , keep slience! ret = %d", ret);
-        usleep((int64_t)bytes * 1000000ll / audio_stream_out_frame_size(stream) /
+        usleep(bytes * 1000000 / audio_stream_out_frame_size(stream) /
                out_get_sample_rate(&stream->common));
     }
 
     return bytes;
 }
 
-/**
- * @brief out_get_render_position
- *
- * @param stream
- * @param dsp_frames
- *
- * @returns
- */
 static int out_get_render_position(const struct audio_stream_out *stream,
                                    uint32_t *dsp_frames)
 {
@@ -2434,40 +1954,16 @@ static int out_get_render_position(const struct audio_stream_out *stream,
     return 0;
 }
 
-/**
- * @brief out_add_audio_effect
- *
- * @param stream
- * @param effect
- *
- * @returns
- */
 static int out_add_audio_effect(const struct audio_stream *stream, effect_handle_t effect)
 {
     return 0;
 }
 
-/**
- * @brief out_remove_audio_effect
- *
- * @param stream
- * @param effect
- *
- * @returns
- */
 static int out_remove_audio_effect(const struct audio_stream *stream, effect_handle_t effect)
 {
     return 0;
 }
 
-/**
- * @brief out_get_next_write_timestamp
- *
- * @param stream
- * @param timestamp
- *
- * @returns
- */
 static int out_get_next_write_timestamp(const struct audio_stream_out *stream,
                                         int64_t *timestamp)
 {
@@ -2475,15 +1971,6 @@ static int out_get_next_write_timestamp(const struct audio_stream_out *stream,
     return -ENOSYS;
 }
 
-/**
- * @brief out_get_presentation_position
- *
- * @param stream
- * @param frames
- * @param timestamp
- *
- * @returns
- */
 static int out_get_presentation_position(const struct audio_stream_out *stream,
         uint64_t *frames, struct timespec *timestamp)
 {
@@ -2497,39 +1984,24 @@ static int out_get_presentation_position(const struct audio_stream_out *stream,
     // We are just interested in the frames pending for playback in the kernel buffer here,
     // not the total played since start.  The current behavior should be safe because the
     // cases where both cards are active are marginal.
-    for (i = 0; i < SND_OUT_SOUND_CARD_MAX; i++)
-        if (out->pcm[i]) {
-            size_t avail;
-            //ALOGD("===============%s,%d==============",__FUNCTION__,__LINE__);
-            if (pcm_get_htimestamp(out->pcm[i], &avail, timestamp) == 0) {
-                size_t kernel_buffer_size = out->config.period_size * out->config.period_count;
-                //ALOGD("===============%s,%d==============",__FUNCTION__,__LINE__);
-                // FIXME This calculation is incorrect if there is buffering after app processor
-                int64_t signed_frames = out->written - kernel_buffer_size + avail;
-                //signed_frames -= 17;
-                //ALOGV("============singed_frames:%lld=======",signed_frames);
-                //ALOGV("============timestamp:%lld==========",timestamp);
-                // It would be unusual for this value to be negative, but check just in case ...
-                if (signed_frames >= 0) {
-                    *frames = signed_frames;
-                    ret = 0;
-                }
-                break;
+    if (out->pcm) {
+        size_t avail;
+        if (pcm_get_htimestamp(out->pcm, &avail, timestamp) == 0) {
+            size_t kernel_buffer_size = out->config.period_size * out->config.period_count;
+            // FIXME This calculation is incorrect if there is buffering after app processor
+            int64_t signed_frames = out->written - kernel_buffer_size + avail;
+            // It would be unusual for this value to be negative, but check just in case ...
+            if (signed_frames >= 0) {
+                *frames = signed_frames;
+                ret = 0;
             }
         }
+    }
     pthread_mutex_unlock(&out->lock);
 
     return ret;
 }
 
-/**
- * @brief in_get_sample_rate
- * audio_stream_in implementation
- *
- * @param stream
- *
- * @returns
- */
 static uint32_t in_get_sample_rate(const struct audio_stream *stream)
 {
     struct stream_in *in = (struct stream_in *)stream;
@@ -2537,26 +2009,11 @@ static uint32_t in_get_sample_rate(const struct audio_stream *stream)
     return in->requested_rate;
 }
 
-/**
- * @brief in_set_sample_rate
- *
- * @param stream
- * @param rate
- *
- * @returns
- */
 static int in_set_sample_rate(struct audio_stream *stream, uint32_t rate)
 {
     return 0;
 }
 
-/**
- * @brief in_get_channels
- *
- * @param stream
- *
- * @returns
- */
 static audio_channel_mask_t in_get_channels(const struct audio_stream *stream)
 {
     struct stream_in *in = (struct stream_in *)stream;
@@ -2565,14 +2022,6 @@ static audio_channel_mask_t in_get_channels(const struct audio_stream *stream)
     return in->channel_mask;
 }
 
-
-/**
- * @brief in_get_buffer_size
- *
- * @param stream
- *
- * @returns
- */
 static size_t in_get_buffer_size(const struct audio_stream *stream)
 {
     struct stream_in *in = (struct stream_in *)stream;
@@ -2583,37 +2032,16 @@ static size_t in_get_buffer_size(const struct audio_stream *stream)
                                  (in->flags & AUDIO_INPUT_FLAG_FAST) != 0);
 }
 
-/**
- * @brief in_get_format
- *
- * @param stream
- *
- * @returns
- */
 static audio_format_t in_get_format(const struct audio_stream *stream)
 {
     return AUDIO_FORMAT_PCM_16_BIT;
 }
 
-/**
- * @brief in_set_format
- *
- * @param stream
- * @param format
- *
- * @returns
- */
 static int in_set_format(struct audio_stream *stream, audio_format_t format)
 {
     return -ENOSYS;
 }
 
-/**
- * @brief do_in_standby
- * must be called with in stream and hw device mutex locked
- *
- * @param in
- */
 static void do_in_standby(struct stream_in *in)
 {
     struct audio_device *adev = in->dev;
@@ -2635,13 +2063,6 @@ static void do_in_standby(struct stream_in *in)
 
 }
 
-/**
- * @brief in_standby
- *
- * @param stream
- *
- * @returns
- */
 static int in_standby(struct audio_stream *stream)
 {
     struct stream_in *in = (struct stream_in *)stream;
@@ -2657,14 +2078,6 @@ static int in_standby(struct audio_stream *stream)
     return 0;
 }
 
-/**
- * @brief in_dump
- *
- * @param stream
- * @param fd
- *
- * @returns
- */
 int in_dump(const struct audio_stream *stream, int fd)
 {
     struct stream_in *in = (struct stream_in *)stream;
@@ -2678,14 +2091,6 @@ int in_dump(const struct audio_stream *stream, int fd)
     return 0;
 }
 
-/**
- * @brief in_set_parameters
- *
- * @param stream
- * @param kvpairs
- *
- * @returns
- */
 static int in_set_parameters(struct audio_stream *stream, const char *kvpairs)
 {
     struct stream_in *in = (struct stream_in *)stream;
@@ -2762,14 +2167,6 @@ static int in_set_parameters(struct audio_stream *stream, const char *kvpairs)
 
 }
 
-/**
- * @brief in_get_parameters
- *
- * @param stream
- * @param keys
- *
- * @returns
- */
 static char * in_get_parameters(const struct audio_stream *stream,
                                 const char *keys)
 {
@@ -2798,26 +2195,11 @@ static char * in_get_parameters(const struct audio_stream *stream,
     return str;
 }
 
-/**
- * @brief in_set_gain
- *
- * @param stream
- * @param gain
- *
- * @returns
- */
 static int in_set_gain(struct audio_stream_in *stream, float gain)
 {
     return 0;
 }
 
-/**
- * @brief in_apply_ramp
- *
- * @param in
- * @param buffer
- * @param frames
- */
 static void in_apply_ramp(struct stream_in *in, int16_t *buffer, size_t frames)
 {
     size_t i;
@@ -2843,15 +2225,6 @@ static void in_apply_ramp(struct stream_in *in, int16_t *buffer, size_t frames)
     in->ramp_frames -= frames;
 }
 
-/**
- * @brief in_read
- *
- * @param stream
- * @param buffer
- * @param bytes
- *
- * @returns
- */
 static ssize_t in_read(struct audio_stream_in *stream, void* buffer,
                        size_t bytes)
 {
@@ -2890,10 +2263,6 @@ static ssize_t in_read(struct audio_stream_in *stream, void* buffer,
 #endif
     }
 
-    /*if (in->num_preprocessors != 0)
-        ret = process_frames(in, buffer, frames_rq);
-      else */
-    //ALOGV("%s:frames_rq:%d",__FUNCTION__,frames_rq);
     frames_rd = read_frames(in, buffer, frames_rq);
     if (in->read_status) {
         ret = -EPIPE;
@@ -2941,26 +2310,11 @@ exit:
     return bytes;
 }
 
-/**
- * @brief in_get_input_frames_lost
- *
- * @param stream
- *
- * @returns
- */
 static uint32_t in_get_input_frames_lost(struct audio_stream_in *stream)
 {
     return 0;
 }
 
-/**
- * @brief in_add_audio_effect
- *
- * @param stream
- * @param effect
- *
- * @returns
- */
 static int in_add_audio_effect(const struct audio_stream *stream,
                                effect_handle_t effect)
 {
@@ -2979,14 +2333,6 @@ static int in_add_audio_effect(const struct audio_stream *stream,
     return 0;
 }
 
-/**
- * @brief in_remove_audio_effect
- *
- * @param stream
- * @param effect
- *
- * @returns
- */
 static int in_remove_audio_effect(const struct audio_stream *stream,
                                   effect_handle_t effect)
 {
@@ -3145,19 +2491,6 @@ static void get_hdmi_support_channels_masks(struct stream_out *out)
     }
 }
 
-/**
- * @brief adev_open_output_stream
- *
- * @param dev
- * @param handle
- * @param devices
- * @param flags
- * @param config
- * @param stream_out
- * @param __unused
- *
- * @returns
- */
 static int adev_open_output_stream(struct audio_hw_device *dev,
                                    audio_io_handle_t handle,
                                    audio_devices_t devices,
@@ -3172,8 +2505,8 @@ static int adev_open_output_stream(struct audio_hw_device *dev,
     enum output_type type = OUTPUT_LOW_LATENCY;
     bool isPcm = audio_is_linear_pcm(config->format);
 
-    ALOGD("audio hal adev_open_output_stream devices = 0x%x, flags = %d, samplerate = %d,format = 0x%x",
-          devices, flags, config->sample_rate,config->format);
+    ALOGD("%s devices = 0x%x, flags = %d, samplerate = %d,format = 0x%x",
+          __func__, devices, flags, config->sample_rate,config->format);
     out = (struct stream_out *)calloc(1, sizeof(struct stream_out));
     if (!out)
         return -ENOMEM;
@@ -3205,13 +2538,13 @@ static int adev_open_output_stream(struct audio_hw_device *dev,
     out->bistream = NULL;
 
     init_hdmi_audio(&out->hdmi_audio);
-    if(devices & AUDIO_DEVICE_OUT_AUX_DIGITAL) {
+    if(devices & AUDIO_DEVICE_OUT_HDMI_1) {
         parse_hdmi_audio(&out->hdmi_audio);
         get_hdmi_support_channels_masks(out);
     }
 
     if (flags & AUDIO_OUTPUT_FLAG_DIRECT) {
-        if (devices & AUDIO_DEVICE_OUT_AUX_DIGITAL) {
+        if (devices & AUDIO_DEVICE_OUT_HDMI_1) {
             if (config->format == AUDIO_FORMAT_IEC61937) {
                 ALOGD("%s:out = %p HDMI Bitstream",__FUNCTION__,out);
                 out->channel_mask = config->channel_mask;
@@ -3250,7 +2583,7 @@ static int adev_open_output_stream(struct audio_hw_device *dev,
                 if (out->config.channels < 2)
                     out->config.channels = 2;
                 out->pcm_device = PCM_DEVICE;
-                out->device = AUDIO_DEVICE_OUT_AUX_DIGITAL;
+                out->device = AUDIO_DEVICE_OUT_HDMI_1;
             } else if (isPcm){ // multi pcm
                 if (config->sample_rate == 0)
                     config->sample_rate = HDMI_MULTI_DEFAULT_SAMPLING_RATE;
@@ -3269,7 +2602,7 @@ static int adev_open_output_stream(struct audio_hw_device *dev,
                     out->config = pcm_config;
                     out->pcm_device = PCM_DEVICE;
                     type = OUTPUT_LOW_LATENCY;
-                    out->device = AUDIO_DEVICE_OUT_AUX_DIGITAL;
+                    out->device = AUDIO_DEVICE_OUT_HDMI_1;
                     out->output_direct = false;
                 } else {
                     /*
@@ -3285,34 +2618,12 @@ static int adev_open_output_stream(struct audio_hw_device *dev,
                     out->config.channels = audio_channel_count_from_out_mask(config->channel_mask);
                     out->pcm_device = PCM_DEVICE;
                     type = OUTPUT_HDMI_MULTI;
-                    out->device = AUDIO_DEVICE_OUT_AUX_DIGITAL;
+                    out->device = AUDIO_DEVICE_OUT_HDMI_1;
                     out->output_direct = true;
                 }
             } else {
                 ALOGD("Not any bitstream mode!");
             }
-        } else if ((devices & AUDIO_DEVICE_OUT_SPDIF)
-                      && (config->format == AUDIO_FORMAT_IEC61937)) {
-            ALOGD("%s:out = %p Spdif Bitstream",__FUNCTION__,out);
-            out->channel_mask = config->channel_mask;
-            out->config = pcm_config_direct;
-            if ((config->sample_rate == 48000) ||
-                    (config->sample_rate == 32000) ||
-                    (config->sample_rate == 44100)) {
-                out->config.rate = config->sample_rate;
-                out->config.format = PCM_FORMAT_S16_LE;
-                out->config.period_size = 2048;
-            } else {
-                out->config.rate = 44100;
-                ALOGE("spdif passthrough samplerate %d is unsupport",config->sample_rate);
-            }
-            out->config.channels = audio_channel_count_from_out_mask(config->channel_mask);
-            devices = AUDIO_DEVICE_OUT_SPDIF;
-            out->pcm_device = PCM_DEVICE;
-            out->output_direct = true;
-            type = OUTPUT_HDMI_MULTI;
-            out->device = AUDIO_DEVICE_OUT_SPDIF;
-            out->output_direct_mode = NLPCM;
         } else {
             out->config = pcm_config;
             out->pcm_device = PCM_DEVICE;
@@ -3377,12 +2688,6 @@ err_open:
     return ret;
 }
 
-/**
- * @brief adev_close_output_stream
- *
- * @param dev
- * @param stream
- */
 static void adev_close_output_stream(struct audio_hw_device *dev,
                                      struct audio_stream_out *stream)
 {
@@ -3409,14 +2714,6 @@ static void adev_close_output_stream(struct audio_hw_device *dev,
     free(stream);
 }
 
-/**
- * @brief adev_set_parameters
- *
- * @param dev
- * @param kvpairs
- *
- * @returns
- */
 static int adev_set_parameters(struct audio_hw_device *dev, const char *kvpairs)
 {
     struct audio_device *adev = (struct audio_device *)dev;
@@ -3461,9 +2758,9 @@ static int adev_set_parameters(struct audio_hw_device *dev, const char *kvpairs)
                             value, sizeof(value));
     if (ret >= 0) {
         int device = atoi(value);
-        if(device == (int)AUDIO_DEVICE_OUT_AUX_DIGITAL){
+        if(device == (int)AUDIO_DEVICE_OUT_HDMI_1){
             struct stream_out *out = adev->outputs[OUTPUT_HDMI_MULTI];
-            if((out != NULL) && is_bitstream(out) && (out->device == AUDIO_DEVICE_OUT_AUX_DIGITAL)) {
+            if((out != NULL) && is_bitstream(out) && (out->device == AUDIO_DEVICE_OUT_HDMI_1)) {
                 ALOGD("%s: hdmi connect when audio stream is output over hdmi, do something,out = %p",__FUNCTION__,out);
                 out->snd_reopen = true;
             }
@@ -3519,14 +2816,6 @@ static int get_support_bitstream_formats(struct str_parms *query,
     return -1;
 }
 
-/**
- * @brief adev_get_parameters
- *
- * @param dev
- * @param keys
- *
- * @returns
- */
 static char * adev_get_parameters(const struct audio_hw_device *dev,
                                   const char *keys)
 {
@@ -3551,26 +2840,11 @@ static char * adev_get_parameters(const struct audio_hw_device *dev,
     return str;
 }
 
-/**
- * @brief adev_init_check
- *
- * @param dev
- *
- * @returns
- */
 static int adev_init_check(const struct audio_hw_device *dev)
 {
     return 0;
 }
 
-/**
- * @brief adev_set_voice_volume
- *
- * @param dev
- * @param volume
- *
- * @returns
- */
 static int adev_set_voice_volume(struct audio_hw_device *dev, float volume)
 {
     int ret = 0;
@@ -3589,27 +2863,11 @@ static int adev_set_voice_volume(struct audio_hw_device *dev, float volume)
     return ret;
 }
 
-/**
- * @brief adev_set_master_volume
- *
- * @param dev
- * @param volume
- *
- * @returns
- */
 static int adev_set_master_volume(struct audio_hw_device *dev, float volume)
 {
     return -ENOSYS;
 }
 
-/**
- * @brief adev_set_mode
- *
- * @param dev
- * @param mode
- *
- * @returns
- */
 static int adev_set_mode(struct audio_hw_device *dev, audio_mode_t mode)
 {
     struct audio_device *adev = (struct audio_device *)dev;
@@ -3620,48 +2878,16 @@ static int adev_set_mode(struct audio_hw_device *dev, audio_mode_t mode)
     return 0;
 }
 
-/**
- * @brief adev_set_mic_mute
- *
- * @param dev
- * @param state
- *
- * @returns
- */
 static int adev_set_mic_mute(struct audio_hw_device *dev, bool state)
 {
-    struct audio_device *adev = (struct audio_device *)dev;
-
-    adev->mic_mute = state;
-
-    return 0;
+    return -ENOSYS;
 }
 
-/**
- * @brief adev_get_mic_mute
- *
- * @param dev
- * @param state
- *
- * @returns
- */
 static int adev_get_mic_mute(const struct audio_hw_device *dev, bool *state)
 {
-    struct audio_device *adev = (struct audio_device *)dev;
-
-    *state = adev->mic_mute;
-
-    return 0;
+    return -ENOSYS;
 }
 
-/**
- * @brief adev_get_input_buffer_size
- *
- * @param dev
- * @param config
- *
- * @returns
- */
 static size_t adev_get_input_buffer_size(const struct audio_hw_device *dev,
         const struct audio_config *config)
 {
@@ -3671,20 +2897,6 @@ static size_t adev_get_input_buffer_size(const struct audio_hw_device *dev,
                                  false /* is_low_latency: since we don't know, be conservative */);
 }
 
-/**
- * @brief adev_open_input_stream
- *
- * @param dev
- * @param handle
- * @param devices
- * @param config
- * @param stream_in
- * @param flags
- * @param __unused
- * @param __unused
- *
- * @returns
- */
 static int adev_open_input_stream(struct audio_hw_device *dev,
                                   audio_io_handle_t handle,
                                   audio_devices_t devices,
@@ -3825,12 +3037,6 @@ err_malloc:
     return ret;
 }
 
-/**
- * @brief adev_close_input_stream
- *
- * @param dev
- * @param stream
- */
 static void adev_close_input_stream(struct audio_hw_device *dev,
                                     struct audio_stream_in *stream)
 {
@@ -3864,42 +3070,22 @@ static void adev_close_input_stream(struct audio_hw_device *dev,
     free(stream);
 }
 
-/**
- * @brief adev_dump
- *
- * @param device
- * @param fd
- *
- * @returns
- */
 static int adev_dump(const audio_hw_device_t *device, int fd)
 {
     return 0;
 }
 
-/**
- * @brief adev_close
- *
- * @param device
- *
- * @returns
- */
 static int adev_close(hw_device_t *device)
 {
-    struct audio_device *adev = (struct audio_device *)device;
-
-    //audio_route_free(adev->ar);
-
-
+    ALOGD("%s in",__func__);
     route_uninit();
-
     free(device);
     return 0;
 }
 
 static void adev_open_init(struct audio_device *adev)
 {
-    ALOGD("%s",__func__);
+    ALOGD("%s in",__func__);
     int i = 0;
     adev->mic_mute = false;
     adev->screenOff = false;
@@ -3913,16 +3099,11 @@ static void adev_open_init(struct audio_device *adev)
     for(i =0; i < OUTPUT_TOTAL; i++){
         adev->outputs[i] = NULL;
     }
-    set_default_dev_info(adev->dev_out, SND_OUT_SOUND_CARD_MAX, 1);
-    set_default_dev_info(adev->dev_in, SND_IN_SOUND_CARD_MAX, 1);
-    adev->dev_out[SND_OUT_SOUND_CARD_SPEAKER].id = "SPEAKER";
-    adev->dev_out[SND_OUT_SOUND_CARD_HDMI].id = "HDMI";
-    adev->dev_out[SND_OUT_SOUND_CARD_SPDIF].id = "SPDIF";
-    adev->dev_out[SND_OUT_SOUND_CARD_BT].id = "BT";
-    adev->dev_in[SND_IN_SOUND_CARD_MIC].id = "MIC";
-    adev->dev_in[SND_IN_SOUND_CARD_BT].id = "BT";
-    adev->owner[0] = NULL;
-    adev->owner[1] = NULL;
+    set_default_dev_info(&adev->dev_out, 1);
+    set_default_dev_info(&adev->dev_in, 1);
+    adev->dev_out.id = "HDMI";
+    adev->dev_in.id = "HDMI";
+    adev->owner = NULL;
 
     char value[PROPERTY_VALUE_MAX];
     if (property_get("vendor.audio.period_size", value, NULL) > 0) {
@@ -3933,15 +3114,6 @@ static void adev_open_init(struct audio_device *adev)
         pcm_config_in.period_size = atoi(value);
 }
 
-/**
- * @brief adev_open
- *
- * @param module
- * @param name
- * @param device
- *
- * @returns
- */
 static int adev_open(const hw_module_t* module, const char* name,
                      hw_device_t** device)
 {
@@ -3977,10 +3149,6 @@ static int adev_open(const hw_module_t* module, const char* name,
     adev->hw_device.close_input_stream = adev_close_input_stream;
     adev->hw_device.dump = adev_dump;
     adev->hw_device.get_microphones = adev_get_microphones;
-    //adev->ar = audio_route_init(MIXER_CARD, NULL);
-    //route_init();
-    /* adev->cur_route_id initial value is 0 and such that first device
-     * selection is always applied by select_devices() */
     *device = &adev->hw_device.common;
 
     adev_open_init(adev);
@@ -3997,7 +3165,7 @@ struct audio_module HAL_MODULE_INFO_SYM = {
         .module_api_version = AUDIO_MODULE_API_VERSION_0_1,
         .hal_api_version = HARDWARE_HAL_API_VERSION,
         .id = AUDIO_HARDWARE_MODULE_ID,
-        .name = "Manta audio HW HAL",
+        .name = "SPDIF audio HW HAL",
         .author = "The Android Open Source Project",
         .methods = &hal_module_methods,
     },

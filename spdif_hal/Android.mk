@@ -15,19 +15,8 @@
 LOCAL_PATH := $(call my-dir)
 
 include $(CLEAR_VARS)
-LOCAL_MODULE := libanr
-LOCAL_MODULE_TAGS := optional
-LOCAL_MULTILIB := 32
-LOCAL_PROPRIETARY_MODULE := true
-LOCAL_MODULE_RELATIVE_PATH := hw
-LOCAL_MODULE_CLASS := SHARED_LIBRARIES
-LOCAL_MODULE_SUFFIX := .so
-LOCAL_SRC_FILES := denoise/skv/libanr.so
-include $(BUILD_PREBUILT)
 
-include $(CLEAR_VARS)
-
-LOCAL_MODULE := audio.primary.$(TARGET_BOARD_HARDWARE)
+LOCAL_MODULE := audio.spdif.$(TARGET_BOARD_HARDWARE)
 LOCAL_PROPRIETARY_MODULE := true
 LOCAL_MODULE_RELATIVE_PATH := hw
 LOCAL_SRC_FILES := \
@@ -38,7 +27,6 @@ LOCAL_SRC_FILES := \
 	alsa_route.c \
 	alsa_mixer.c \
 	voice_preprocess.c \
-	audio_hw_hdmi.c \
 	denoise/rkdenoise.c
 
 LOCAL_C_INCLUDES += \
@@ -108,18 +96,6 @@ else
 LOCAL_SHARED_LIBRARIES += libtinyalsa
 endif
 
-ifeq ($(strip $(BOARD_SUPPORT_MULTIAUDIO)), true)
-LOCAL_CFLAGS += -DSUPPORT_MULTIAUDIO
-endif
-
 LOCAL_STATIC_LIBRARIES := libspeex
 LOCAL_MODULE_TAGS := optional
 include $(BUILD_SHARED_LIBRARY)
-
-include $(CLEAR_VARS)
-LOCAL_CFLAGS += -Wno-error
-LOCAL_SRC_FILES:= amix.c alsa_mixer.c
-LOCAL_MODULE:= amix
-LOCAL_PROPRIETARY_MODULE := true
-LOCAL_SHARED_LIBRARIES := liblog libc libcutils
-include $(BUILD_EXECUTABLE)
