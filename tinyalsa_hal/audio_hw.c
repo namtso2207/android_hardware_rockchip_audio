@@ -3198,12 +3198,25 @@ static int adev_open_output_stream(struct audio_hw_device *dev,
     int ret;
     enum output_type type = OUTPUT_LOW_LATENCY;
     bool isPcm = audio_is_linear_pcm(config->format);
+    bool isBitstream = false;
 
     ALOGD("audio hal adev_open_output_stream devices = 0x%x, flags = %d, samplerate = %d,format = 0x%x",
           devices, flags, config->sample_rate,config->format);
+
+    // only support PCM or IEC61937 format
+    if (!audio_has_proportional_frames(config->format)) {
+        ALOGD("%s: format = 0x%x not support", __FUNCTION__, config->format);
+        return -1;
+    }
+
     out = (struct stream_out *)calloc(1, sizeof(struct stream_out));
     if (!out)
         return -ENOMEM;
+
+    if ((flags & AUDIO_OUTPUT_FLAG_IEC958_NONAUDIO) ||
+        (config->format == AUDIO_FORMAT_IEC61937)) {
+        isBitstream = true;
+    }
 
     /*get default supported channel_mask*/
     memset(out->supported_channel_masks, 0, sizeof(out->supported_channel_masks));
@@ -3239,7 +3252,7 @@ static int adev_open_output_stream(struct audio_hw_device *dev,
 
     if (flags & AUDIO_OUTPUT_FLAG_DIRECT) {
         if (devices & AUDIO_DEVICE_OUT_AUX_DIGITAL) {
-            if (config->format == AUDIO_FORMAT_IEC61937) {
+            if (isBitstream) {
                 ALOGD("%s:out = %p HDMI Bitstream",__FUNCTION__,out);
                 out->channel_mask = config->channel_mask;
                 if (isValidSamplerate(config->sample_rate)) {
@@ -3318,8 +3331,7 @@ static int adev_open_output_stream(struct audio_hw_device *dev,
             } else {
                 ALOGD("Not any bitstream mode!");
             }
-        } else if ((devices & AUDIO_DEVICE_OUT_SPDIF)
-                      && (config->format == AUDIO_FORMAT_IEC61937)) {
+        } else if ((devices & AUDIO_DEVICE_OUT_SPDIF) && isBitstream) {
             ALOGD("%s:out = %p Spdif Bitstream",__FUNCTION__,out);
             out->channel_mask = config->channel_mask;
             out->config = pcm_config_direct;
