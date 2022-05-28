@@ -2763,11 +2763,7 @@ static int in_set_parameters(struct audio_stream *stream, const char *kvpairs)
         /* no audio device uses val == 0 */
         if ((in->device != val) && (val != 0)) {
             channel_check_start(in);
-            /* force output standby to start or stop SCO pcm stream if needed */
-            if ((val & AUDIO_DEVICE_IN_BLUETOOTH_SCO_HEADSET) ^
-                    (in->device & AUDIO_DEVICE_IN_BLUETOOTH_SCO_HEADSET)) {
-                do_in_standby(in);
-            }
+            do_in_standby(in);
             in->device = val;
             apply_now = !in->standby;
         }
