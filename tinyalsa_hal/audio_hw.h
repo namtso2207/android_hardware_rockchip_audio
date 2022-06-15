@@ -109,7 +109,7 @@
 #ifdef BOX_HAL
 struct pcm_config pcm_config = {
     .channels = 2,
-    .rate = 44100,
+    .rate = 48000,
     .period_size = 512,
     .period_count = 3,
     .format = PCM_FORMAT_S16_LE,
@@ -117,7 +117,7 @@ struct pcm_config pcm_config = {
 
 struct pcm_config pcm_config_in = {
     .channels = 2,
-    .rate = 44100,
+    .rate = 48000,
     .period_size = 1024,
     .period_count = 4,
     .format = PCM_FORMAT_S16_LE,
