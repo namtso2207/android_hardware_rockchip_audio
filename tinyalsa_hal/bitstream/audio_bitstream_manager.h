@@ -27,8 +27,11 @@ typedef struct _rk_bistream {
     char *buffer;             // output buffer
     int  capaticy;            // output buffer size
     enum pcm_format format;   // output format
+    int   channel;
+    int   samplerate;
     char *chnStatus;          // for kernel 4.19 and before version
     rk_iec958 iec958;         // for kernel 5.10 and later version
+    bool  firstFrame;
 } rk_bistream;
 
 rk_bistream* bitstream_init(enum pcm_format format, int samplerate, int channel);

@@ -30,13 +30,17 @@
 #endif
 
 #define LOG_TAG "bitstream_manager"
+#define PADDING_SIZE 32
 
 rk_bistream* bitstream_init(enum pcm_format format, int samplerate, int channel) {
     rk_bistream *bs = (rk_bistream*)malloc(sizeof(rk_bistream));
     memset(bs, 0, sizeof(rk_bistream));
     bs->format = format;
+    bs->samplerate = samplerate;
+    bs->channel = channel;
     bs->buffer = NULL;
     bs->chnStatus = NULL;
+    bs->firstFrame = true;
 
     if (format == PCM_FORMAT_S24_LE) {
         bs->chnStatus = malloc(CHASTA_SUB_NUM);
@@ -63,18 +67,38 @@ int bitstream_encode(rk_bistream *bs, char *inBuffer, int inSize, char **outBuff
             free(bs->buffer);
         }
 
-        bs->capaticy = inSize*2;
+        bs->capaticy = inSize*2 + PADDING_SIZE;
         bs->buffer = (char *)malloc(bs->capaticy);
         ALOGD("%s: %d malloc bistream buffer(size = %d)", __FUNCTION__, __LINE__, bs->capaticy);
     }
 
     *outBuffer = bs->buffer;
-    *outSize   = 2*inSize;
+    *outSize   = 0;
     int ret = -1;
+    int offset = 0;
+    int size = 0;
     if (bs->format == PCM_FORMAT_S24_LE) {
         ret = fill_hdmi_bitstream_buf((void *)inBuffer, (void *)bs->buffer,(void*)bs->chnStatus, (int)inSize);
+        *outSize   = 2*inSize;
     } else if (bs->format == PCM_FORMAT_IEC958_SUBFRAME_LE) {
-        ret = iec958_frame_encode(&bs->iec958, inBuffer, inSize, bs->buffer, outSize);
+        /*
+         * this is for TV compatibility
+         * Our's HDMI/DRIVER may drop 1 sample for some reason which is 4 bytes for ac3/eac3/dts
+         * or 16bytes for DTS-HD/Atoms/TrueHD, some TV only identify the first frame which first
+         * received, if the sync word is lost in first frame, the TV don't identify the next frames
+         * and keep silence.
+         */
+        if (bs->firstFrame) {
+            bs->firstFrame = false;
+            char padding[16] = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
+            int paddingSize = (bs->channel == 8) ? 16 : 4;
+            ALOGD("add padding size = %d", paddingSize);
+            iec958_frame_encode(&bs->iec958, padding, paddingSize, bs->buffer, &offset);
+            *outSize += offset;
+        }
+
+        ret = iec958_frame_encode(&bs->iec958, inBuffer, inSize, &bs->buffer[offset], &size);
+        *outSize += size;
     } else {
         ALOGD("%s: format = %d not support", __FUNCTION__, (int)bs->format);
         *outSize = 0;
