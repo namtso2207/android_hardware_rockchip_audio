@@ -69,6 +69,18 @@ const struct config_control es8388_headphone_ringtone_controls[] = {
 };
 
 const struct config_control es8388_speaker_headphone_normal_controls[] = {
+    {
+        .ctl_name = "Left Mixer Left Playback Switch",
+        .int_val = {on},
+    },
+    {
+        .ctl_name = "Right Mixer Right Playback Switch",
+        .int_val = {on},
+    },
+    {
+        .ctl_name = "Output 1 Playback Volume",
+        .int_val = {27, 27},
+    },
 };
 
 const struct config_control es8388_speaker_headphone_ringtone_controls[] = {
