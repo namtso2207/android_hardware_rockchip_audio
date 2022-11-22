@@ -70,7 +70,7 @@
 #define CAPTURE_START_RAMP_MS 100
 
 /* default sampling for default output */
-#define DEFAULT_PLAYBACK_SAMPLERATE 48000
+#define DEFAULT_PLAYBACK_SAMPLERATE 44100
 
 #define DEFAULT_PLAYBACK_CHANNELS 2
 
@@ -123,7 +123,7 @@ struct pcm_config pcm_config_in = {
 #else
 struct pcm_config pcm_config = {
     .channels = 2,
-    .rate = 48000,
+    .rate = 44100,
     .period_size = 512,
     .period_count = 6,
     .format = PCM_FORMAT_S16_LE,
