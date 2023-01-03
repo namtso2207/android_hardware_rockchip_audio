@@ -480,8 +480,7 @@ static bool get_specified_out_dev(struct dev_info *devinfo,
     for (device = 0; device < SNDRV_DEVICES; device++) {
         sprintf(str_device, "proc/asound/card%d/pcm%dp/info", card, device);
         if (access(str_device, 0)) {
-            ALOGD("No exist %s, break and finish parsing", str_device);
-            break;
+            continue;
         }
         file = fopen(str_device, "r");
         if (!file) {
@@ -556,8 +555,7 @@ static bool get_specified_in_dev(struct dev_info *devinfo,
     for (device = 0; device < SNDRV_DEVICES; device++) {
         sprintf(str_device, "proc/asound/card%d/pcm%dc/info", card, device);
         if (access(str_device, 0)) {
-            ALOGD("No exist %s, break and finish parsing", str_device);
-            break;
+            continue;
         }
         file = fopen(str_device, "r");
         if (!file) {
@@ -648,8 +646,7 @@ static void read_out_sound_card(struct stream_out *out)
     for (card = 0; card < SNDRV_CARDS; card++) {
         sprintf(str, "proc/asound/card%d/id", card);
         if (access(str, 0)) {
-            ALOGD("No exist %s, break and finish parsing", str);
-            break;
+            continue;
         }
         file = fopen(str, "r");
         if (!file) {
@@ -695,8 +692,7 @@ static void read_in_sound_card(struct stream_in *in)
     for (card = 0; card < SNDRV_CARDS; card++) {
         sprintf(str, "proc/asound/card%d/id", card);
         if(access(str, 0)) {
-            ALOGD("No exist %s, break and finish parsing", str);
-                break;
+            continue;
         }
         file = fopen(str, "r");
         if (!file) {
