@@ -71,6 +71,7 @@
 #include "audio_hw_hdmi.h"
 #include "denoise/rkdenoise.h"
 #include "bitstream/audio_bitstream_manager.h"
+#include <cutils/list.h>
 
 #define AUDIO_HAL_VERSION "ALSA Audio Version: V1.1.0"
 
@@ -211,7 +212,9 @@ enum snd_out_sound_cards {
     SND_OUT_SOUND_CARD_UNKNOWN = -1,
     SND_OUT_SOUND_CARD_SPEAKER = 0,
     SND_OUT_SOUND_CARD_HDMI,
+    SND_OUT_SOUND_CARD_HDMI_1,
     SND_OUT_SOUND_CARD_SPDIF,
+    SND_OUT_SOUND_CARD_SPDIF_1,
     SND_OUT_SOUND_CARD_BT,
     SND_OUT_SOUND_CARD_MAX,
 };
@@ -272,6 +275,12 @@ struct audio_device {
 
     bool bt_wb_speech_enabled;
     unsigned int bt_sco_reroute;
+
+    audio_patch_handle_t next_patch_handle; // Increase 1 when create audio patch
+    /* output */
+    struct listnode output_stream_list;
+    /* input */
+    struct listnode input_stream_list;
 };
 
 struct stream_out {
@@ -320,6 +329,12 @@ struct stream_out {
     bool  snd_reopen;
     bool  use_default_config;
     float volume[2];
+
+    audio_io_handle_t handle; // Unique identifier for a stream
+    audio_patch_handle_t patch_handle; // Patch handle for this stream
+    struct listnode list_node;
+    audio_devices_t devices[AUDIO_PATCH_PORTS_MAX];
+    int num_configs;
 };
 
 struct stream_in {
@@ -354,6 +369,10 @@ struct stream_in {
     uint32_t channel_flag;
     int start_checkcount;
     uint64_t frames_read;
+
+    audio_io_handle_t handle; // Unique identifier for a stream
+    audio_patch_handle_t patch_handle; // Patch handle for this stream
+    struct listnode list_node;
 };
 
 #define STRING_TO_ENUM(string) { #string, string }
