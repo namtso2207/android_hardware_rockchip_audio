@@ -95,6 +95,11 @@ ifeq ($(AUD_VOICE_CONFIG),voice_support)
 LOCAL_CFLAGS += -DVOICE_SUPPORT
 endif
 
+#rk3528 no need padding
+ifeq ($(filter rk3528, $(TARGET_BOARD_PLATFORM)), )
+LOCAL_CFLAGS += -DADD_PADDING
+endif
+
 LOCAL_CFLAGS += -Wno-error
 
 LOCAL_SHARED_LIBRARIES := liblog libcutils libaudioutils libaudioroute libhardware_legacy libspeexresampler

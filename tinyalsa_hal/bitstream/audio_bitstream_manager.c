@@ -77,26 +77,36 @@ int bitstream_encode(rk_bistream *bs, char *inBuffer, int inSize, char **outBuff
     int ret = -1;
     int offset = 0;
     int size = 0;
+    /*
+     * this is for TV compatibility
+     * Our's HDMI/DRIVER may drop 1 sample for some reason which is 4 bytes for ac3/eac3/dts
+     * or 16bytes for DTS-HD/Atoms/TrueHD, some TV only identify the first frame which first
+     * received, if the sync word is lost in first frame, the TV don't identify the next frames
+     * and keep silence.
+     */
+    char padding[16] = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
+    int paddingSize = (bs->channel == 8) ? 16 : 4;
     if (bs->format == PCM_FORMAT_S24_LE) {
-        ret = fill_hdmi_bitstream_buf((void *)inBuffer, (void *)bs->buffer,(void*)bs->chnStatus, (int)inSize);
-        *outSize   = 2*inSize;
-    } else if (bs->format == PCM_FORMAT_IEC958_SUBFRAME_LE) {
-        /*
-         * this is for TV compatibility
-         * Our's HDMI/DRIVER may drop 1 sample for some reason which is 4 bytes for ac3/eac3/dts
-         * or 16bytes for DTS-HD/Atoms/TrueHD, some TV only identify the first frame which first
-         * received, if the sync word is lost in first frame, the TV don't identify the next frames
-         * and keep silence.
-         */
+#ifdef ADD_PADDING
         if (bs->firstFrame) {
             bs->firstFrame = false;
-            char padding[16] = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
-            int paddingSize = (bs->channel == 8) ? 16 : 4;
+            ALOGD("add padding size = %d", paddingSize);
+            fill_hdmi_bitstream_buf((void *)padding, (void *)bs->buffer, (void*)bs->chnStatus, paddingSize);
+            offset = 2*paddingSize;
+        }
+#endif
+
+        ret = fill_hdmi_bitstream_buf((void *)inBuffer, (void *)&bs->buffer[offset], (void*)bs->chnStatus, (int)inSize);
+        *outSize = 2*inSize+offset;
+    } else if (bs->format == PCM_FORMAT_IEC958_SUBFRAME_LE) {
+#ifdef ADD_PADDING
+        if (bs->firstFrame) {
+            bs->firstFrame = false;
             ALOGD("add padding size = %d", paddingSize);
             iec958_frame_encode(&bs->iec958, padding, paddingSize, bs->buffer, &offset);
             *outSize += offset;
         }
-
+#endif
         ret = iec958_frame_encode(&bs->iec958, inBuffer, inSize, &bs->buffer[offset], &size);
         *outSize += size;
     } else {
