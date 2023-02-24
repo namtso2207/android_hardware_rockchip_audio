@@ -88,7 +88,6 @@ ifeq ($(strip $(TARGET_BOARD_PLATFORM)),rk3128)
 endif
 ifeq ($(strip $(TARGET_BOARD_PLATFORM)),rk3588)
     LOCAL_CFLAGS += -DRK3588
-    LOCAL_CFLAGS += -DIEC958_FORAMT
 endif
 
 ifeq ($(AUD_VOICE_CONFIG),voice_support)
@@ -107,6 +106,7 @@ LOCAL_SHARED_LIBRARIES := liblog libcutils libaudioutils libaudioroute libhardwa
 #API 31 -> Android 12.0, Android 12.0 link libtinyalsa_iec958
 ifneq (1, $(strip $(shell expr $(PLATFORM_SDK_VERSION) \< 31)))
 LOCAL_SHARED_LIBRARIES += libtinyalsa_iec958
+LOCAL_CFLAGS += -DIEC958_FORAMT
 else
 LOCAL_SHARED_LIBRARIES += libtinyalsa
 endif
@@ -125,4 +125,39 @@ LOCAL_SRC_FILES:= amix.c alsa_mixer.c
 LOCAL_MODULE:= amix
 LOCAL_PROPRIETARY_MODULE := true
 LOCAL_SHARED_LIBRARIES := liblog libc libcutils
+include $(BUILD_EXECUTABLE)
+
+include $(CLEAR_VARS)
+$(info  "BUILD_BISTREAM_TEST")
+LOCAL_CFLAGS += -Wno-error
+
+#rk3528 no need padding
+ifeq ($(filter rk3528, $(TARGET_BOARD_PLATFORM)), )
+LOCAL_CFLAGS += -DADD_PADDING
+endif
+
+LOCAL_SRC_FILES := \
+    alsa_mixer.c \
+    bitstream/audio_bitstream.c  \
+    bitstream/audio_bitstream_manager.c  \
+    bitstream/audio_iec958.c  \
+    bitstream_test.c
+
+LOCAL_C_INCLUDES := \
+    system/core/libutils/include \
+    ${LOCAL_PATH}/bitstream
+
+LOCAL_32_BIT_ONLY := true
+LOCAL_MODULE:= bitstream_test
+LOCAL_PROPRIETARY_MODULE := true
+LOCAL_SHARED_LIBRARIES := liblog libc libcutils
+
+ifneq (1, $(strip $(shell expr $(PLATFORM_SDK_VERSION) \< 31)))
+LOCAL_SHARED_LIBRARIES += libtinyalsa_iec958
+LOCAL_CFLAGS += -DIEC958_FORAMT
+else
+LOCAL_SHARED_LIBRARIES += libtinyalsa
+endif
+
+
 include $(BUILD_EXECUTABLE)
