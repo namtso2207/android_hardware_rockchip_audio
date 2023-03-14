@@ -57,6 +57,7 @@
 #include "audio_hw.h"
 #include <system/audio.h>
 #include "codec_config/config.h"
+#include "utils/audio_time.h"
 
 #include <unistd.h>
 #include <fcntl.h>
@@ -1731,7 +1732,7 @@ static void do_out_standby(struct stream_out *out)
 {
     struct audio_device *adev = out->dev;
     int i;
-    ALOGD("%s,out = %p,device = 0x%x",__FUNCTION__,out,out->device);
+    ALOGD("%s,out = %p,device = 0x%x, standby = %d",__FUNCTION__,out,out->device,out->standby);
     if (!out->standby) {
         for (i = 0; i < SND_OUT_SOUND_CARD_MAX; i++) {
             if (out->pcm[i]) {
@@ -2286,6 +2287,11 @@ static int bitstream_write_data(struct stream_out *out, void* buffer, size_t byt
                     out_mute_data(out,(void*)outBuffer, outSize);
                     dump_out_data((void*)outBuffer, outSize);
                     ret = pcm_write(out->pcm[SND_OUT_SOUND_CARD_HDMI], (void *)outBuffer, outSize);
+                    if (ret != 0) {
+                        ALOGD("%s:%d pcm_write error, out = %p, errno = %d, %s",
+                            __FUNCTION__, __LINE__, out, errno,
+                             pcm_get_error(out->pcm[SND_OUT_SOUND_CARD_HDMI]));
+                    }
                 }
             }
         } else {
@@ -2394,6 +2400,8 @@ static ssize_t out_write(struct audio_stream_out *stream, const void* buffer,
     struct audio_device *adev = out->dev;
     size_t newbytes = bytes * 2;
     int i,card;
+    uint64_t startTime, endTime, cost;
+
     /* FIXME This comment is no longer correct
      * acquiring hw device mutex systematically is useful if a low
      * priority thread is waiting on the output stream mutex - e.g.
@@ -2417,11 +2425,10 @@ static ssize_t out_write(struct audio_stream_out *stream, const void* buffer,
         out->standby = false;
         unlock_all_outputs(adev, out);
     }
-false_alarm:
 
+false_alarm:
     if (out->disabled) {
         ret = -EPIPE;
-        ALOGD("%s: %d: error out = %p",__FUNCTION__,__LINE__,out);
         goto exit;
     }
 
@@ -2485,8 +2492,11 @@ false_alarm:
                         continue;
                     }
                     ret = pcm_write(out->pcm[i], (void *)buffer, bytes);
-                    if (ret != 0)
+                    if (ret != 0) {
+                        ALOGD("%s:%d pcm_write error, errno = %d, %s",
+                            __FUNCTION__, __LINE__, errno, pcm_get_error(out->pcm[i]));
                         break;
+                    }
                 }
             }
     }
@@ -2500,8 +2510,25 @@ final_exit:
     }
     if (ret != 0) {
         ALOGV("AudioData write  error , keep slience! ret = %d", ret);
-        usleep((int64_t)bytes * 1000000ll / audio_stream_out_frame_size(stream) /
-               out_get_sample_rate(&stream->common));
+        endTime = getRelativeUs();
+        cost = endTime - startTime;
+        uint64_t time = (uint64_t)bytes * 1000000ll / audio_stream_out_frame_size(stream) /
+              out_get_sample_rate(&stream->common);
+        if (cost < time) {
+           usleep((int)(time - cost));
+        }
+
+        /*
+         * HDR video will set hdmi to hdr mode in kernel, this operation will
+         * lead hdmi card enter stop state(see sound/soc/codecs/hdmi-codec.c),
+         * and pcm_write will alway fail, and  pcm_prepare in pcm_write can not
+         * recovery this state. It can only recovery by reopen sound card.
+         */
+        if (!out->standby && !out->disabled) {
+            lock_all_outputs(adev);
+            do_out_standby(out);
+            unlock_all_outputs(adev, NULL);
+        }
     }
 
     return bytes;

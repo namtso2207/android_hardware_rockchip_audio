@@ -15,20 +15,21 @@
 LOCAL_PATH := $(call my-dir)
 
 commonSrcFiles := \
-	bitstream/audio_iec958.c \
-	bitstream/audio_bitstream.c \
-	bitstream/audio_bitstream_manager.c \
-	audio_hw.c \
-	alsa_route.c \
-	alsa_mixer.c \
-	voice_preprocess.c \
-	audio_hw_hdmi.c \
-	denoise/rkdenoise.c
+   utils/audio_time.c       \
+   bitstream/audio_iec958.c \
+   bitstream/audio_bitstream.c \
+   bitstream/audio_bitstream_manager.c \
+   audio_hw.c \
+   alsa_route.c \
+   alsa_mixer.c \
+   voice_preprocess.c \
+   audio_hw_hdmi.c \
+   denoise/rkdenoise.c
 
 commonCIncludes := \
-	$(call include-path-for, audio-utils) \
-	$(call include-path-for, audio-route) \
-	$(call include-path-for, speex)
+   $(call include-path-for, audio-utils) \
+   $(call include-path-for, audio-route) \
+   $(call include-path-for, speex)
 
 commonCFlags := -Wno-unused-parameter
 commonCFlags += -DLIBTINYALSA_ENABLE_VNDK_EXT
