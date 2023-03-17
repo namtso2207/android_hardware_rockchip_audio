@@ -1062,7 +1062,8 @@ static int open_pcm(int card, int device, int index, struct stream_out *out)
         return -EINVAL;
     }
 
-    out->pcm[index] = pcm_open(card, device, PCM_OUT | PCM_MONOTONIC,
+    if (!out->pcm[index])
+        out->pcm[index] = pcm_open(card, device, PCM_OUT | PCM_MONOTONIC,
                 (index == (int)SND_OUT_SOUND_CARD_BT) ? pcm_config : &out->config);
 
     if (out->pcm[index] && !pcm_is_ready(out->pcm[index])) {
