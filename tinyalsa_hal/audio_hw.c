@@ -1261,7 +1261,7 @@ static int get_next_buffer(struct resampler_buffer_provider *buffer_provider,
         }
 
 #ifdef RK_DENOISE_ENABLE
-        if (!(in->device == AUDIO_DEVICE_IN_HDMI)) {
+        if ((in->mDenioseState != NULL) && !(in->device == AUDIO_DEVICE_IN_HDMI) && !(in->device == AUDIO_DEVICE_IN_BLUETOOTH_SCO_HEADSET)) {
             rkdenoise_process(in->mDenioseState, (void*)in->buffer, size, (void*)in->buffer);
         }
 #endif
@@ -1415,6 +1415,7 @@ static int start_input_stream(struct stream_in *in)
     read_in_sound_card(in);
 
     if (in->device == AUDIO_DEVICE_IN_BLUETOOTH_SCO_HEADSET) {
+        in->config = &pcm_config_in_bt;
         in->config->rate = adev->bt_wb_speech_enabled?16000:8000;
         card = adev->dev_in[SND_IN_SOUND_CARD_BT].card;
         device =  adev->dev_in[SND_IN_SOUND_CARD_BT].device;
@@ -1442,6 +1443,7 @@ static int start_input_stream(struct stream_in *in)
         }
     } else {
         ALOGD("open build mic");
+        in->config = &pcm_config_in;
         card = adev->dev_in[SND_IN_SOUND_CARD_MIC].card;
         device =  adev->dev_in[SND_IN_SOUND_CARD_MIC].device;
 
@@ -1482,7 +1484,13 @@ static int start_input_stream(struct stream_in *in)
         return -ENOMEM;
     }
 
+    if (in->resampler) {
+        release_resampler(in->resampler);
+        in->resampler = NULL;
+    }
+
     if (in->config->rate != in->requested_rate) {
+        ALOGD("create resampler in->config->rate=%d  in->requested_rate=%d",in->config->rate,in->requested_rate);
         ret = create_resampler_helper(in, in->config->rate);
         if (ret < 0 || in->resampler == NULL) {
             pcm_close(in->pcm);
