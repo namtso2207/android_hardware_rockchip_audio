@@ -73,7 +73,7 @@
 #define CHL_VALID (1 << 0)
 #define CH_CHECK (1 << 2)
 
-#define HDMI_BITSTREAM_BYPASS "ELD Bypass"
+#define HDMI_BITSTREAM_BYPASS "ELD Bypass Switch"
 
 struct SurroundFormat {
     audio_format_t format;
@@ -930,15 +930,15 @@ static bool is_multi_pcm(struct stream_out *out)
  * @brief mixer_hdmi_set_force_bypass
  * force hdmi to bypass even if hdmi not support bypass
  */
-static int mixer_hdmi_set_force_bypass(struct stream_out *out)
+static int mixer_hdmi_set_force_bypass(struct stream_out *out, int card)
 {
     int ret = 0;
     struct mixer *pMixer = NULL;
     struct mixer_ctl *pctl;
     struct audio_device *adev = out->dev;
 
-    if (is_type_in_outdevices(out, AUDIO_DEVICE_OUT_AUX_DIGITAL)) {
-        pMixer = mixer_open_legacy(adev->dev_out[SND_OUT_SOUND_CARD_HDMI].card);
+    if (is_type_in_outdevices(out, AUDIO_DEVICE_OUT_AUX_DIGITAL) && card >= 0) {
+        pMixer = mixer_open_legacy(card);
         if (!pMixer) {
             return ret;
         }
@@ -1128,7 +1128,7 @@ static int start_output_stream(struct stream_out *out)
                 }
     #endif
     #endif
-                mixer_hdmi_set_force_bypass(out);
+                mixer_hdmi_set_force_bypass(out, card);
                 ret = open_pcm(card, device, (int)SND_OUT_SOUND_CARD_HDMI, out);
                 if (ret < 0) return ret;
 
