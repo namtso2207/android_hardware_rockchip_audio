@@ -1182,7 +1182,7 @@ static int start_output_stream(struct stream_out *out)
             if (ret < 0) return ret;
         }
 #endif
-        if (out->devices[i] == AUDIO_DEVICE_OUT_ALL_SCO) {
+        if (audio_is_bluetooth_out_sco_device(out->devices[i])) {
             card = adev->dev_out[SND_OUT_SOUND_CARD_BT].card;
             device = adev->dev_out[SND_OUT_SOUND_CARD_BT].device;
             struct pcm_config *pcm_config = &pcm_config_ap_sco;
