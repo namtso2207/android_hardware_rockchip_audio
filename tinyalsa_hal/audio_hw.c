@@ -386,6 +386,7 @@ static void adev_add_stream_to_list(
 
 struct dev_proc_info SPEAKER_OUT_NAME[] = /* add codes& dai name here*/
 {
+    {"rockchipcarrk33", NULL},
     {"realtekrt5616c", NULL,},
     {"realtekrt5651co", "rt5651-aif1",},
     {"realtekrt5670c", NULL,},
@@ -449,6 +450,7 @@ struct dev_proc_info BT_OUT_NAME[] =
 
 struct dev_proc_info MIC_IN_NAME[] =
 {
+    {"rockchipcarrk33", NULL},
     {"realtekrt5616c", NULL,},
     {"realtekrt5651co", "rt5651-aif1",},
     {"realtekrt5670c", NULL,},
@@ -1146,7 +1148,8 @@ static int start_output_stream(struct stream_out *out)
 
         if (out->devices[i] == AUDIO_DEVICE_OUT_SPEAKER ||
             out->devices[i] == AUDIO_DEVICE_OUT_WIRED_HEADSET ||
-            out->devices[i] == AUDIO_DEVICE_OUT_WIRED_HEADPHONE) {
+            out->devices[i] == AUDIO_DEVICE_OUT_WIRED_HEADPHONE ||
+	    out->devices[i] == AUDIO_DEVICE_OUT_BUS) {
             audio_devices_t route_device = out->devices[i];
             route_pcm_card_open(adev->dev_out[SND_OUT_SOUND_CARD_SPEAKER].card, getRouteFromDevice(route_device));
             card = adev->dev_out[SND_OUT_SOUND_CARD_SPEAKER].card;
