@@ -1026,6 +1026,12 @@ static void open_sound_card_policy(struct stream_out *out)
     if (is_bitstream(out) || (is_multi_pcm(out))) {
         return ;
     }
+
+    for (int i = 0; i < out->num_configs; ++i) {
+        if (audio_is_bluetooth_out_sco_device(out->devices[i]))
+            return;
+    }
+
     /*
      * This is special process
      * open all sound card to output one audio stream at the same time
