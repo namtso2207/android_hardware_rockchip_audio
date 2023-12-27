@@ -215,6 +215,7 @@ FILE *in_debug;
 int in_dump(const struct audio_stream *stream, int fd);
 int out_dump(const struct audio_stream *stream, int fd);
 static inline bool hasExtCodec();
+static inline bool hasExt_hp_inserted();
 
 /**
  * @brief get_output_device_id
@@ -730,7 +731,7 @@ static bool get_specified_in_dev(struct dev_info *devinfo,
 
     while (match[i].cid) {
         score = name_match(id, match[i].cid);
-        if (score >= better) {
+        if (score > better) {
             better = score;
             index = i;
         }
@@ -939,6 +940,26 @@ inline bool hasExtCodec()
       }
       fclose(fd);
     }
+    return ret;
+}
+
+inline bool hasExt_hp_inserted()
+{
+    char line[80];
+    bool ret = false;
+    FILE *fd = fopen("sys/class/es8316/hp_inserted","r");
+    if(NULL != fd){
+      memset(line, 0, 80);
+      while((fgets(line,80,fd))!= NULL){
+          line[80-1]='\0';
+          if(strstr(line,"1")){
+              ret = true;
+              break;
+          }
+      }
+      fclose(fd);
+    }
+	ALOGD("%s: =%d",__FUNCTION__,ret);
     return ret;
 }
 
@@ -1211,6 +1232,7 @@ static int start_output_stream(struct stream_out *out)
     int ret = 0;
     int card = (int)SND_OUT_SOUND_CARD_UNKNOWN;
     int device = 0;
+	//static int devices_out_old = 0;
     // set defualt value to true for compatible with mid project
 
 
@@ -1231,10 +1253,20 @@ static int start_output_stream(struct stream_out *out)
     open_sound_card_policy(out);
 #endif
 #endif
-	if(hasExtCodec()){
+
+	if(hasExtCodec() && hasExt_hp_inserted() && out->devices[0]!=AUDIO_DEVICE_OUT_BLUETOOTH_SCO \
+		&& out->devices[0]!=AUDIO_DEVICE_OUT_BLUETOOTH_SCO_HEADSET && out->devices[0]!=AUDIO_DEVICE_OUT_BLUETOOTH_SCO_CARKIT){
+
+		//devices_out_old = out->devices[0];
 		out->devices[0] = AUDIO_DEVICE_OUT_SPEAKER;
 		ALOGD("hlm force rockchipes8316c audio out devices[0] = 0x%x",out->devices[0]);
 	}
+	else {
+		//if(devices_out_old != AUDIO_DEVICE_OUT_SPEAKER)
+		//	out->devices[0] = devices_out_old;
+	}
+//if(out->devices[0]==AUDIO_DEVICE_OUT_SPEAKER)
+//out->devices[0] = AUDIO_DEVICE_OUT_SPEAKER|0x400;
 
     for (int i = 0; i < out->num_configs; ++i) {
         ALOGD("%s: i = %d, device = 0x%x", __FUNCTION__, i, out->devices[i]);
